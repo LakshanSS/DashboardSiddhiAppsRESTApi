@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SQLConstants.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils</a> &gt; <span class="el_source">SQLConstants.java</span></div><h1>SQLConstants.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils;
+
+/**
+ * Class to define SQL queries and constants.
+ */
+public class SQLConstants {
+<span class="nc" id="L26">    private SQLConstants() {</span>
+        //preventing initialization
+<span class="nc" id="L28">    }</span>
+    
+    public static final String SELECT_QUERY = &quot;recordSelectQuery&quot;;
+    public static final String SELECT_APP_METRICS_QUERY = &quot;recordSelectAppMetricsQuery&quot;;
+    public static final String SELECT_WORKER_METRICS_QUERY = &quot;recordSelectWorkerMetricsQuery&quot;;
+    public static final String SELECT_WORKER_THROUGHPUT_QUERY = &quot;recordSelectWorkerThroughputQuery&quot;;
+    public static final String SELECT_WORKER_AGGREGATE_METRICS_QUERY = &quot;recordSelectWorkerAggregateMetricsQuery&quot;;
+    public static final String SELECT_WORKER_AGGREGATE_THROUGHPUT_QUERY = &quot;recordSelectWorkerAggregateThroughputQuery&quot;;
+    public static final String SELECT_COMPONENT_LIST = &quot;selectAppComponentList&quot;;
+    public static final String SELECT_COMPONENT_METRICS_HISTORY = &quot;selectAppComponentHistory&quot;;
+    public static final String SELECT_APP_AGG_METRICS_HISTORY = &quot;recordSelectAgregatedAppMetricsQuery&quot;;
+    public static final String SELECT_COMPONENT_AGG_METRICS_HISTORY = &quot;selectAppComponentAggregatedHistory&quot;;
+    public static final String SELECT_COMPONENT_METRICS = &quot;selectAppComponentMetrics&quot;;
+    public static final String CREATE_TABLE = &quot;tableCreateQuery&quot;;
+    public static final String ISTABLE_EXISTS_QUERY = &quot;tableCheckQuery&quot;;
+    public static final String DELETE_QUERY = &quot;recordDeleteQuery&quot;;
+    public static final String INSERT_QUERY = &quot;recordInsertQuery&quot;;
+    
+    //Placeholder strings needed for processing the query configuration file
+    public static final String DASHBOARD_CONFIG_FILE = &quot;dashboard-configs.yaml&quot;;
+    public static final String QUERY_CONFIG_FILE = &quot;queries.yaml&quot;;
+    public static final String PLACEHOLDER_COLUMNS = &quot;{{COLUMNS}}&quot;;
+    public static final String PLACEHOLDER_CONDITION = &quot;{{CONDITION}}&quot;;
+    public static final String PLACEHOLDER_TABLE_NAME = &quot;{{TABLE_NAME}}&quot;;
+    public static final String PLACEHOLDER_NAME = &quot;{{NAME}}&quot;;
+    public static final String PLACEHOLDER_AGGREGATION_COMPONENT_COLOUM = &quot;{{ALL_COLUMS_EXPRESSION}}&quot;;
+    public static final String PLACEHOLDER_AGGREGATION_TIME = &quot;{{TIME_AGGREGATION_IN_MINUTES}}&quot;;
+    public static final String PLACEHOLDER_WORKER_ID = &quot;{{WORKER_ID}}&quot;;
+    public static final String PLACEHOLDER_TIME_INTERVAL = &quot;{{TIME_INTERVAL}}&quot;;
+    public static final String PLACEHOLDER_CURRENT_TIME = &quot;{{CURRENT_TIME_MILLISECONDS}}&quot;;
+    public static final String PLACEHOLDER_BEGIN_TIME = &quot;{{BEGIN_TIME_MILLISECONDS}}&quot;;
+    public static final String PLACEHOLDER_RESULT = &quot;{{RESULT}}&quot;;
+    public static final String PLACEHOLDER_Q = &quot;{{Q}}&quot;;
+    public static final String PLACEHOLDER_COLUMNS_PRIMARYKEY = &quot;{{COLUMNS, PRIMARY_KEYS}}&quot;;
+    public static final String STRING_TEMPLATE = &quot;%s&quot;;
+    public static final String INTEGER_TEMPLATE = &quot;%d&quot;;
+    public static final String SQL_WHERE = &quot;WHERE&quot;;
+    public static final String WHITESPACE = &quot; &quot;;
+    public static final String SEPARATOR = &quot;,&quot;;
+    public static final String SEPARATOR_REGEX = &quot;,&quot;;
+    public static final String TUPLE_SEPARATOR = &quot;,%n&quot;;
+    public static final String QUESTION_MARK = &quot;?&quot;;
+    public static final String PERCENTAGE_MARK = &quot;%&quot;;
+    public static final String PACKAGE_NAME_SEPARATOR = &quot;.&quot;;
+    public static final String COLUMN_COUNT = &quot;TIMESTAMP,COUNT&quot;;
+    public static final String AGG_COLUMN_COUNT = &quot;AGG_TIMESTAMP,COUNT&quot;;
+    public static final String AGG_AVG_COLUMN_COUNT =&quot;AVG(COUNT) as COUNT&quot;;
+    //metrics types
+    public static final String METRICS_TYPE_LATENCY = &quot;latency&quot;;
+    public static final String METRICS_TYPE_LATENCY_COUNT = &quot;latency_count&quot;;
+    public static final String METRICS_TYPE_MEMORY = &quot;memory&quot;;
+    public static final String METRICS_TYPE_THROUGHPUT = &quot;throughput&quot;;
+    public static final String METRICS_TYPE_THROUGHPUT_COUNT = &quot;throughput_count&quot;;
+    //metrics table names
+    public static final String METRICS_TABLE_METRIC_COUNTER = &quot;METRIC_COUNTER&quot;;
+    public static final String METRICS_TABLE_METRIC_GAUGE = &quot;METRIC_GAUGE&quot;;
+    public static final String METRICS_TABLE_METRIC_HISTOGRAM = &quot;METRIC_HISTOGRAM&quot;;
+    public static final String METRICS_TABLE_METRIC_METER = &quot;METRIC_METER&quot;;
+    public static final String METRICS_TABLE_METRIC_TIMER = &quot;METRIC_TIMER&quot;;
+    
+    //metrics column names
+    public static final String COLUMN_TIMESTAMP = &quot;TIMESTAMP&quot;;
+    public static final String COLUMN_AGG_TIMESTAMP = &quot;AGG_TIMESTAMP&quot;;
+    public static final String COLUMN_VALUE = &quot;VALUE&quot;;
+    public static final String COLUMN_NAME = &quot;NAME&quot;;
+    public static final String COLUMN_M1_RATE = &quot;M1_RATE&quot;;
+    
+    //sql expressions
+    public static final String EXPR_SUM_FROM_STRING = &quot;SUM(CAST(result.VALUE as DECIMAL(22,2)))&quot;;
+    public static final String EXPR_SUM_FROM_M1_RATE = &quot;SUM(result.M1_RATE)&quot;;
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SiddhiAppMetricsHistory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.bean</a> &gt; <span class="el_source">SiddhiAppMetricsHistory.java</span></div><h1>SiddhiAppMetricsHistory.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.bean;
+
+import java.text.NumberFormat;
+import java.util.List;
+
+/**
+ * Model for siddhi app overview data.
+ */
+public class SiddhiAppMetricsHistory {
+    private MetricsLineCharts latency;
+    private MetricsLineCharts memory;
+    private MetricsLineCharts throughput;
+    private String latencyRecent;
+    private String memoryRecent;
+    private String throughputRecent;
+    
+<span class="nc" id="L36">    public SiddhiAppMetricsHistory() {</span>
+<span class="nc" id="L37">    }</span>
+    
+<span class="nc" id="L39">    public SiddhiAppMetricsHistory(String appName) {</span>
+<span class="nc" id="L40">        latency = new MetricsLineCharts();</span>
+<span class="nc" id="L41">        memory = new MetricsLineCharts();</span>
+<span class="nc" id="L42">        throughput = new MetricsLineCharts();</span>
+<span class="nc" id="L43">    }</span>
+    
+    public MetricsLineCharts getLatency() {
+<span class="nc" id="L46">        return latency;</span>
+    }
+    
+    public void setLatency(List&lt;List&lt;Object&gt;&gt; latencyData) {
+<span class="nc" id="L50">        this.latency.setData(latencyData);</span>
+<span class="nc" id="L51">        setLatencyRecent(latencyData);</span>
+<span class="nc" id="L52">    }</span>
+    
+    public MetricsLineCharts getMemory() {
+<span class="nc" id="L55">        return memory;</span>
+    }
+    
+    public void setMemory(List&lt;List&lt;Object&gt;&gt; memoryData) {
+<span class="nc" id="L59">        this.memory.setData(memoryData);</span>
+<span class="nc" id="L60">        setMemoryRecent(memoryData);</span>
+<span class="nc" id="L61">    }</span>
+    
+    public MetricsLineCharts getThroughput() {
+<span class="nc" id="L64">        return throughput;</span>
+    }
+    
+    public void setThroughput(List&lt;List&lt;Object&gt;&gt; throughputData) {
+<span class="nc" id="L68">        this.throughput.setData(throughputData);</span>
+<span class="nc" id="L69">        setThroughputRecent(throughputData);</span>
+<span class="nc" id="L70">    }</span>
+    
+    public String getLatencyRecent() {
+<span class="nc" id="L73">        return latencyRecent;</span>
+    }
+    
+    public void setLatencyRecent(List&lt;List&lt;Object&gt;&gt; latency) {
+<span class="nc bnc" id="L77" title="All 4 branches missed.">        if ((latency != null) &amp;&amp; (!latency.isEmpty())) {</span>
+<span class="nc" id="L78">            this.latencyRecent = NumberFormat.getIntegerInstance().format((latency.get(latency.size() - 1)).get(1));</span>
+        } else {
+<span class="nc" id="L80">            latencyRecent = &quot;0&quot;;</span>
+        }
+<span class="nc" id="L82">    }</span>
+    
+    public String getMemoryRecent() {
+<span class="nc" id="L85">        return memoryRecent;</span>
+    }
+    
+    public void setMemoryRecent(List&lt;List&lt;Object&gt;&gt; memory) {
+<span class="nc bnc" id="L89" title="All 4 branches missed.">        if ((memory != null) &amp;&amp; (!memory.isEmpty())) {</span>
+<span class="nc" id="L90">            this.memoryRecent = humanReadableByteCount(((double) (memory.get(memory.size() - 1))</span>
+<span class="nc" id="L91">                    .get(1)), true);</span>
+        } else {
+<span class="nc" id="L93">            memoryRecent = &quot;0&quot;;</span>
+        }
+<span class="nc" id="L95">    }</span>
+    
+    public String getThroughputRecent() {
+<span class="nc" id="L98">        return throughputRecent;</span>
+    }
+    
+    public void setThroughputRecent(List&lt;List&lt;Object&gt;&gt; throughput) {
+<span class="nc bnc" id="L102" title="All 4 branches missed.">        if ((throughput != null) &amp;&amp; (!throughput.isEmpty())) {</span>
+<span class="nc" id="L103">            this.throughputRecent = NumberFormat.getIntegerInstance()</span>
+<span class="nc" id="L104">                    .format((throughput.get(throughput.size() - 1)).get(1));</span>
+        } else {
+<span class="nc" id="L106">            throughputRecent = &quot;0&quot;;</span>
+        }
+<span class="nc" id="L108">    }</span>
+    
+    public static String humanReadableByteCount(double bytes, boolean si) {
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        int unit = si ? 1000 : 1024;</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if (bytes &lt; unit) {</span>
+<span class="nc" id="L113">            return bytes + &quot; B&quot;;</span>
+        }
+<span class="nc" id="L115">        int exp = (int) (Math.log(bytes) / Math.log(unit));</span>
+<span class="nc bnc" id="L116" title="All 4 branches missed.">        String pre = (si ? &quot;kMGTPE&quot; : &quot;KMGTPE&quot;).charAt(exp - 1) + (si ? &quot;&quot; : &quot;i&quot;);</span>
+<span class="nc" id="L117">        return String.format(&quot;%.1f %sB&quot;, bytes / Math.pow(unit, exp), pre);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

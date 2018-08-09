@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>MonitoringDataHolder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal</a> &gt; <span class="el_source">MonitoringDataHolder.java</span></div><h1>MonitoringDataHolder.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.wso2.carbon.analytics.idp.client.core.api.AnalyticsHttpClientBuilderService;
+import org.wso2.carbon.analytics.permissions.PermissionProvider;
+import org.wso2.carbon.config.provider.ConfigProvider;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.roles.provider.RolesProvider;
+
+/**
+ * This is data holder for config provider implementations.
+ */
+public class MonitoringDataHolder {
+<span class="nc" id="L33">    private static MonitoringDataHolder instance = new MonitoringDataHolder();</span>
+    private ConfigProvider configProvider;
+    private HikariDataSource metricsDataSource;
+    private HikariDataSource dashboardDataSource;
+    private RolesProvider rolesProvider;
+    private PermissionProvider permissionProvider;
+<span class="nc" id="L39">    private DeploymentConfigs statusDashboardDeploymentConfigs = new DeploymentConfigs();</span>
+    private AnalyticsHttpClientBuilderService clientBuilderService;
+
+<span class="nc" id="L42">    private MonitoringDataHolder() {</span>
+<span class="nc" id="L43">    }</span>
+
+    /**
+     * Provide instance of MonitoringDataHolder class.
+     *
+     * @return Instance of MonitoringDataHolder
+     */
+    public static MonitoringDataHolder getInstance() {
+<span class="nc" id="L51">        return instance;</span>
+    }
+
+    /**
+     * Returns config provider.
+     *
+     * @return Instance of config provider
+     */
+    public ConfigProvider getConfigProvider() {
+<span class="nc" id="L60">        return this.configProvider;</span>
+    }
+
+    /**
+     * Sets instance of config provider.
+     *
+     * @param configProvider Instance of servicers provider
+     */
+    public void setConfigProvider(ConfigProvider configProvider) {
+<span class="nc" id="L69">        this.configProvider = configProvider;</span>
+<span class="nc" id="L70">    }</span>
+
+
+    public HikariDataSource getMetricsDataSource() {
+<span class="nc" id="L74">        return metricsDataSource;</span>
+    }
+
+    public void setMetricsDataSource(HikariDataSource metricsDataSource) {
+<span class="nc" id="L78">        this.metricsDataSource = metricsDataSource;</span>
+<span class="nc" id="L79">    }</span>
+
+    public HikariDataSource getDashboardDataSource() {
+<span class="nc" id="L82">        return dashboardDataSource;</span>
+    }
+
+    public void setDashboardDataSource(HikariDataSource dashboardDataSource) {
+<span class="nc" id="L86">        this.dashboardDataSource = dashboardDataSource;</span>
+<span class="nc" id="L87">    }</span>
+
+    public RolesProvider getRolesProvider() {
+<span class="nc" id="L90">        return rolesProvider;</span>
+    }
+
+    public void setRolesProvider(RolesProvider rolesProvider) {
+<span class="nc" id="L94">        this.rolesProvider = rolesProvider;</span>
+<span class="nc" id="L95">    }</span>
+
+    public PermissionProvider getPermissionProvider() {
+<span class="nc" id="L98">        return permissionProvider;</span>
+    }
+
+    public void setPermissionProvider(PermissionProvider permissionProvider) {
+<span class="nc" id="L102">        this.permissionProvider = permissionProvider;</span>
+<span class="nc" id="L103">    }</span>
+
+    public DeploymentConfigs getStatusDashboardDeploymentConfigs() {
+<span class="nc" id="L106">        return statusDashboardDeploymentConfigs;</span>
+    }
+
+    public void setStatusDashboardDeploymentConfigs(DeploymentConfigs statusDashboardDeploymentConfigs) {
+<span class="nc" id="L110">        this.statusDashboardDeploymentConfigs = statusDashboardDeploymentConfigs;</span>
+<span class="nc" id="L111">    }</span>
+
+    public AnalyticsHttpClientBuilderService getClientBuilderService() {
+<span class="nc" id="L114">        return clientBuilderService;</span>
+    }
+
+    public void setClientBuilderService(
+            AnalyticsHttpClientBuilderService clientBuilderService) {
+<span class="nc" id="L119">        this.clientBuilderService = clientBuilderService;</span>
+<span class="nc" id="L120">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SiddhiAppsApiProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal</a> &gt; <span class="el_source">SiddhiAppsApiProvider.java</span></div><h1>SiddhiAppsApiProvider.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the &quot;License&quot;); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal;
+
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.AppsApi;
+import org.wso2.carbon.siddhi.apps.api.rest.AppsApiService;
+import org.wso2.carbon.uiserver.api.App;
+import org.wso2.carbon.uiserver.spi.RestApiProvider;
+import org.wso2.msf4j.Microservice;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Provider that supplies Microservices for the {@link #STATUS_DASHBOARD_APP_NAME} web app.
+ *
+ * @since 4.0.0
+ */
+@Component(
+        service = RestApiProvider.class,
+        immediate = true
+)
+<span class="nc" id="L43">public class SiddhiAppsApiProvider implements RestApiProvider {</span>
+    
+    public static final String STATUS_DASHBOARD_APP_NAME = &quot;monitoring&quot;;
+<span class="nc" id="L46">    private static final Logger logger = LoggerFactory.getLogger(SiddhiAppsApiProvider.class);</span>
+    
+    private AppsApiService dashboardDataProvider;
+    
+    @Activate
+    protected void activate(BundleContext bundleContext) {
+<span class="nc" id="L52">        logger.debug(&quot;{} activated.&quot;, this.getClass().getName());</span>
+<span class="nc" id="L53">    }</span>
+    
+    @Deactivate
+    protected void deactivate(BundleContext bundleContext) {
+<span class="nc" id="L57">        logger.debug(&quot;{} deactivated.&quot;, this.getClass().getName());</span>
+<span class="nc" id="L58">    }</span>
+    
+    
+    @Reference(
+            service = AppsApiService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterWorkersApiServiceImpl&quot;
+    )
+    public void registerWorkersApiServiceImpl(AppsApiService monitoringApiService) {
+<span class="nc bnc" id="L68" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L69">            logger.debug(&quot;@Reference(bind) ServicePermissionGrantService&quot;);</span>
+        }
+<span class="nc" id="L71">        this.dashboardDataProvider = monitoringApiService;</span>
+        
+<span class="nc" id="L73">    }</span>
+    
+    public void unregisterWorkersApiServiceImpl(AppsApiService monitoringApiService) {
+<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L77">            logger.debug(&quot;@Reference(unbind) ServicePermissionGrantService&quot;);</span>
+        }
+<span class="nc" id="L79">        this.dashboardDataProvider = null;</span>
+<span class="nc" id="L80">    }</span>
+    
+    @Override
+    public String getAppName() {
+<span class="nc" id="L84">        return STATUS_DASHBOARD_APP_NAME;</span>
+    }
+    
+    @Override
+    public Map&lt;String, Microservice&gt; getMicroservices(App app) {
+<span class="nc" id="L89">        Map&lt;String, Microservice&gt; microservices = new HashMap&lt;&gt;(2);</span>
+<span class="nc" id="L90">        microservices.put(AppsApi.API_CONTEXT_PATH, new AppsApi(dashboardDataProvider));</span>
+<span class="nc" id="L91">        return microservices;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DBHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.dbhandler</a> &gt; <span class="el_source">DBHandler.java</span></div><h1>DBHandler.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+package org.wso2.carbon.siddhi.apps.api.rest.dbhandler;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.RDBMSTableException;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+
+/**
+ * This class represents key database operations related to node data.
+ */
+
+public class DBHandler {
+<span class="nc" id="L37">    private static final Logger logger = LoggerFactory.getLogger(DBHandler.class);</span>
+<span class="nc" id="L38">    private static DBHandler instance = new DBHandler();</span>
+    
+<span class="nc" id="L40">    private DBHandler() {</span>
+    
+<span class="nc" id="L42">    }</span>
+    
+    public static DBHandler getInstance() {
+<span class="nc" id="L45">        return instance;</span>
+    }
+    
+    /**
+     * Initialize the db connection.
+     *
+     * @throws RDBMSTableException data source cannot be found
+     */
+    Connection getConnection(HikariDataSource dataSource) {
+        try {
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            if (dataSource != null) {</span>
+<span class="nc" id="L56">                Connection conn = dataSource.getConnection();</span>
+<span class="nc" id="L57">                conn.setAutoCommit(true);</span>
+<span class="nc" id="L58">                return conn;</span>
+            } else {
+<span class="nc" id="L60">                throw new RDBMSTableException(&quot;Datasource Could not be found. &quot; +</span>
+                        &quot;Hence cannot initialize the status dashboard.&quot;);
+            }
+<span class="nc" id="L63">        } catch (SQLException e) {</span>
+<span class="nc" id="L64">            throw new RDBMSTableException(&quot;Error initializing connection.&quot;, e);</span>
+        }
+    }
+    
+    
+    /**
+     * Insert node data node db.
+     *
+     * @return isSuccess
+     */
+    boolean insert(PreparedStatement stmt) {
+        try {
+<span class="nc" id="L76">            stmt.execute();</span>
+<span class="nc" id="L77">            return true;</span>
+<span class="nc" id="L78">        } catch (SQLException e) {</span>
+<span class="nc" id="L79">            throw new RDBMSTableException(&quot;Error while inserting node:&quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L81">            try {</span>
+<span class="nc" id="L82">                stmt.close();</span>
+<span class="nc" id="L83">            } catch (SQLException e) {</span>
+<span class="nc" id="L84">                logger.error(&quot;Error closing statement due to &quot; + e.getMessage() + &quot; in insert.&quot;, e);</span>
+<span class="nc" id="L85">            }</span>
+<span class="nc" id="L86">        }</span>
+    }
+    
+    /**
+     * Delete nodes data to node db.
+     *
+     * @return isSuccess.
+     */
+    public boolean delete(PreparedStatement stmt) {
+        try {
+<span class="nc" id="L96">            stmt.execute();</span>
+<span class="nc" id="L97">            stmt.close();</span>
+<span class="nc" id="L98">            return true;</span>
+<span class="nc" id="L99">        } catch (SQLException e) {</span>
+<span class="nc" id="L100">            throw new RDBMSTableException(&quot; Error while processing the delete operation.&quot;, e);</span>
+        }
+    }
+    
+    /**
+     * Select node from the node DB.
+     *
+     * @return list of object.
+     */
+    
+    ResultSet select(PreparedStatement stmt) {
+        ResultSet rs;
+        try {
+<span class="nc" id="L113">            rs = stmt.executeQuery();</span>
+            
+<span class="nc" id="L115">        } catch (SQLException e) {</span>
+<span class="nc" id="L116">            throw new RDBMSTableException(&quot;Error retrieving records from table&quot;, e);</span>
+<span class="nc" id="L117">        }</span>
+<span class="nc" id="L118">        return rs;</span>
+    }
+    
+    /**
+     * Create table query.
+     *
+     * @param conn the connection
+     * @param ps the prepared statement
+     * @throws RDBMSTableException
+     */
+    public void createTable(Connection conn, PreparedStatement ps) throws RDBMSTableException {
+        try {
+<span class="nc" id="L130">            ps.executeUpdate();</span>
+<span class="nc" id="L131">            conn.commit();</span>
+<span class="nc" id="L132">        } catch (SQLException e) {</span>
+<span class="nc" id="L133">            throw new RDBMSTableException(&quot;Unable to create table.&quot;, e);</span>
+<span class="nc" id="L134">        }</span>
+<span class="nc" id="L135">    }</span>
+    
+    /**
+     * Method for checking whether or not the given table (which reflects the current event table instance) exists.
+     *
+     * @return true/false based on the table existence.
+     */
+    public boolean isTableExist(Connection conn, String query) {
+        try {
+<span class="nc" id="L144">            try (PreparedStatement tableCheckstmt = conn.prepareStatement(query)) {</span>
+<span class="nc" id="L145">                try (ResultSet rs = tableCheckstmt.executeQuery()) {</span>
+<span class="nc" id="L146">                    return true;</span>
+<span class="nc bnc" id="L147" title="All 8 branches missed.">                }</span>
+<span class="nc bnc" id="L148" title="All 8 branches missed.">            }</span>
+<span class="nc" id="L149">        } catch (SQLException e) {</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">            if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L151">                logger.debug(&quot;Table  assumed to not exist since its existence check resulted &quot;</span>
+                        + &quot;in exception &quot;, e);
+            }
+<span class="nc" id="L154">            return false;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

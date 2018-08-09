@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionGrantServiceComponent.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal.services</a> &gt; <span class="el_source">PermissionGrantServiceComponent.java</span></div><h1>PermissionGrantServiceComponent.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal.services;
+
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.analytics.idp.client.core.api.IdPClient;
+import org.wso2.carbon.analytics.idp.client.core.exception.IdPClientException;
+import org.wso2.carbon.analytics.permissions.PermissionManager;
+import org.wso2.carbon.analytics.permissions.PermissionProvider;
+import org.wso2.carbon.analytics.permissions.bean.Permission;
+import org.wso2.carbon.analytics.permissions.bean.Role;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.UnauthorizedException;
+import org.wso2.carbon.siddhi.apps.api.rest.impl.utils.Constants;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.roles.provider.RolesProvider;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * This is OSGi-components to register config provider class.
+ */
+@Component(
+        name = &quot;org.wso2.carbon.status.dashboard.core.internal.services.PermissionGrantServiceComponent&quot;,
+        service = PermissionGrantServiceComponent.class,
+        immediate = true
+)
+public class PermissionGrantServiceComponent {
+<span class="nc" id="L51">    private static final Logger logger = LoggerFactory.getLogger(PermissionGrantServiceComponent.class);</span>
+    private PermissionProvider permissionProvider;
+    private IdPClient identityClient;
+    
+<span class="nc" id="L55">    public PermissionGrantServiceComponent() {</span>
+<span class="nc" id="L56">    }</span>
+    
+    @Activate
+    protected void start(BundleContext bundleContext) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L61">            logger.debug(&quot;Status dashboard permission grant service component is activated.&quot;);</span>
+        }
+        try {
+<span class="nc" id="L64">            DeploymentConfigs resolvedConfiguration = MonitoringDataHolder.getInstance()</span>
+<span class="nc" id="L65">                    .getStatusDashboardDeploymentConfigs();</span>
+<span class="nc" id="L66">            RolesProvider rolesProvider = new RolesProvider(resolvedConfiguration);</span>
+<span class="nc" id="L67">            MonitoringDataHolder.getInstance().setRolesProvider(rolesProvider);</span>
+<span class="nc" id="L68">            initPermission();</span>
+<span class="nc" id="L69">        } catch (UnauthorizedException e) {</span>
+<span class="nc" id="L70">            logger.error(&quot;Authorization error.&quot;, e);</span>
+<span class="nc" id="L71">        } catch (IdPClientException e) {</span>
+<span class="nc" id="L72">            logger.error(&quot;error in getting admin.&quot;, e);</span>
+<span class="nc" id="L73">        }</span>
+<span class="nc" id="L74">    }</span>
+    
+    @Deactivate
+    protected void stop() throws Exception {
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L79">            logger.debug(&quot;Status dashboard permission grant service component is deactivated.&quot;);</span>
+        }
+<span class="nc" id="L81">    }</span>
+    
+    private void initPermission() throws UnauthorizedException, IdPClientException {
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        for (Permission permission : getAllPermission()) {</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">            if (!permissionProvider.isPermissionExists(permission)) {</span>
+<span class="nc" id="L86">                permissionProvider.addPermission(permission);</span>
+            }
+<span class="nc" id="L88">        }</span>
+        
+<span class="nc" id="L90">        List&lt;Role&gt; sysAdminRoles = MonitoringDataHolder.getInstance()</span>
+<span class="nc" id="L91">                .getRolesProvider().getSysAdminRolesList(identityClient);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">        if (!sysAdminRoles.isEmpty()) {</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">            for (Permission permission : buildDashboardAdminPermissions(Constants.PERMISSION_APP_NAME)) {</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">                for (Role role : sysAdminRoles) {</span>
+<span class="nc" id="L95">                    permissionProvider.grantPermission(permission, role);</span>
+<span class="nc" id="L96">                }</span>
+<span class="nc" id="L97">            }</span>
+        } else {
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            for (Permission permission : buildDashboardAdminPermissions(Constants.PERMISSION_APP_NAME)) {</span>
+<span class="nc" id="L100">                Role role = new Role(identityClient.getAdminRole().getId(), identityClient.getAdminRole()</span>
+<span class="nc" id="L101">                        .getDisplayName());</span>
+<span class="nc" id="L102">                permissionProvider.grantPermission(permission, role);</span>
+<span class="nc" id="L103">            }</span>
+        }
+        
+        List&lt;Role&gt; devRoles = MonitoringDataHolder
+<span class="nc" id="L107">                .getInstance().getRolesProvider().getDeveloperRolesList(identityClient);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (!devRoles.isEmpty()) {</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            for (Permission permission : buildDashboardDevPermissions(Constants.PERMISSION_APP_NAME)) {</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                for (Role role : devRoles) {</span>
+<span class="nc" id="L111">                    permissionProvider.grantPermission(permission, role);</span>
+<span class="nc" id="L112">                }</span>
+<span class="nc" id="L113">            }</span>
+        }
+        
+        List&lt;Role&gt; viwerRoles = MonitoringDataHolder
+<span class="nc" id="L117">                .getInstance().getRolesProvider().getViewerRolesList(identityClient);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (!viwerRoles.isEmpty()) {</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            for (Permission permission : buildDashboardViewPermissions(Constants.PERMISSION_APP_NAME)) {</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">                for (Role role : viwerRoles) {</span>
+<span class="nc" id="L121">                    permissionProvider.grantPermission(permission, role);</span>
+<span class="nc" id="L122">                }</span>
+<span class="nc" id="L123">            }</span>
+        }
+<span class="nc" id="L125">    }</span>
+    
+    /**
+     * Build basic dashboard permission string.
+     *
+     * @return
+     */
+    private List&lt;Permission&gt; getAllPermission() {
+<span class="nc" id="L133">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L134">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, Constants.PERMISSION_APP_NAME +</span>
+                Constants.PERMISSION_SUFFIX_METRICS_MANAGER));
+<span class="nc" id="L136">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, Constants.PERMISSION_APP_NAME +</span>
+                Constants.PERMISSION_SUFFIX_MANAGER));
+<span class="nc" id="L138">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, Constants.PERMISSION_APP_NAME +</span>
+                Constants.PERMISSION_SUFFIX_VIEWER));
+<span class="nc" id="L140">        return permissions;</span>
+    }
+    
+    /**
+     * Build basic dashboard permission string.
+     *
+     * @param permisstionString
+     * @return
+     */
+    private List&lt;Permission&gt; buildDashboardAdminPermissions(String permisstionString) {
+<span class="nc" id="L150">        return getAllPermission();</span>
+    }
+    
+    /**
+     * Build basic dashboard permission string.
+     *
+     * @param permisstionString
+     * @return
+     */
+    private List&lt;Permission&gt; buildDashboardDevPermissions(String permisstionString) {
+<span class="nc" id="L160">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L161">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, permisstionString +</span>
+                Constants.PERMISSION_SUFFIX_MANAGER));
+<span class="nc" id="L163">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, permisstionString +</span>
+                Constants.PERMISSION_SUFFIX_VIEWER));
+<span class="nc" id="L165">        return permissions;</span>
+    }
+    
+    /**
+     * Build basic dashboard permission string.
+     *
+     * @param permisstionString
+     * @return
+     */
+    private List&lt;Permission&gt; buildDashboardViewPermissions(String permisstionString) {
+<span class="nc" id="L175">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L176">        permissions.add(new Permission(Constants.PERMISSION_APP_NAME, permisstionString +</span>
+                Constants.PERMISSION_SUFFIX_VIEWER));
+<span class="nc" id="L178">        return permissions;</span>
+    }
+    
+    @Reference(
+            name = &quot;org.wso2.carbon.analytics.idp.client.core.api.IdPClient&quot;,
+            service = IdPClient.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unsetIdP&quot;
+    )
+    protected void setIdP(IdPClient client) {
+<span class="nc" id="L189">        this.identityClient = client;</span>
+<span class="nc" id="L190">    }</span>
+    
+    protected void unsetIdP(IdPClient client) {
+<span class="nc" id="L193">        this.identityClient = null;</span>
+<span class="nc" id="L194">    }</span>
+    
+    @Reference(
+            name = &quot;permission-manager&quot;,
+            service = PermissionManager.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unsetPermissionManager&quot;
+    )
+    protected void setPermissionManager(PermissionManager permissionManager) {
+<span class="nc" id="L204">        this.permissionProvider = permissionManager.getProvider();</span>
+<span class="nc" id="L205">        MonitoringDataHolder.getInstance().setPermissionProvider(this.permissionProvider);</span>
+<span class="nc" id="L206">    }</span>
+    
+    protected void unsetPermissionManager(PermissionManager permissionManager) {
+<span class="nc" id="L209">        this.permissionProvider = null;</span>
+<span class="nc" id="L210">        MonitoringDataHolder.getInstance().setPermissionProvider(null);</span>
+<span class="nc" id="L211">    }</span>
+    
+    @Reference(
+            name = &quot;org.wso2.carbon.status.dashboard.core.internal.services.DashboardInitConfigComponent&quot;,
+            service = DashboardInitConfigComponent.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterDashboardInitConfigComponent&quot;
+    )
+    public void regiterDashboardInitConfigComponent(DashboardInitConfigComponent serviceComponent) {
+<span class="nc bnc" id="L221" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L222">            logger.debug(&quot;@Reference(bind) DashboardInitConfigComponent&quot;);</span>
+        }
+        
+<span class="nc" id="L225">    }</span>
+    
+    public void unregisterDashboardInitConfigComponent(DashboardInitConfigComponent serviceComponent) {
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L229">            logger.debug(&quot;@Reference(unbind) DashboardInitConfigComponent&quot;);</span>
+        }
+<span class="nc" id="L231">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,837 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatusDashboardMetricsDBHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.dbhandler</a> &gt; <span class="el_source">StatusDashboardMetricsDBHandler.java</span></div><h1>StatusDashboardMetricsDBHandler.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.dbhandler;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.config.ConfigurationException;
+import org.wso2.carbon.database.query.manager.exception.QueryMappingNotAvailableException;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.table.Attribute;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.table.ComponentMetrics;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.table.MetricElement;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.table.TypeMetrics;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.DBTableUtils;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.RDBMSTableException;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.StatusDashboardRuntimeException;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
+
+import java.sql.*;
+import java.text.NumberFormat;
+import java.util.*;
+
+import static org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants.*;
+
+/**
+ * This class represents key database operations related to metrics data.
+ */
+public class StatusDashboardMetricsDBHandler {
+<span class="nc" id="L47">    private static final Logger logger = LoggerFactory.getLogger(StatusDashboardMetricsDBHandler.class);</span>
+<span class="nc" id="L48">    private static final String DATASOURCE_ID = MonitoringDataHolder.getInstance().getStatusDashboardDeploymentConfigs()</span>
+<span class="nc" id="L49">            .getMetricsDatasourceName();</span>
+<span class="nc" id="L50">    private static final String[] METRICS_TABLE_NAMES = {METRICS_TABLE_METRIC_COUNTER, METRICS_TABLE_METRIC_GAUGE,</span>
+            METRICS_TABLE_METRIC_HISTOGRAM, METRICS_TABLE_METRIC_METER, METRICS_TABLE_METRIC_TIMER};
+    private static final String APP_NAME_PREFIX = &quot;org.wso2.siddhi.SiddhiApps.&quot;;
+    private String selectAppMetricsQuery;
+    private String recordSelectAggregatedAppMetricsQuery;
+    private String selectWorkerMetricsQuery;
+    private String selectWorkerAggregatedMetricsQuery;
+    private String selectAppComponentList;
+    private String selectWorkerAggregatedThroughputQuery;
+    private String selectWorkerThroughputQuery;
+    private String selectAppComponentHistory;
+    private String selectAppComponentAggregatedHistory;
+    private HikariDataSource dataSource;
+    private Map&lt;String, Map&lt;String, String&gt;&gt; workerAttributeTypeMap;
+    private QueryManager metricsQueryManager;
+    
+<span class="nc" id="L66">    public StatusDashboardMetricsDBHandler() {</span>
+<span class="nc" id="L67">        Connection conn = null;</span>
+<span class="nc" id="L68">        dataSource = MonitoringDataHolder.getInstance().getMetricsDataSource();</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (dataSource != null) {</span>
+            try {
+<span class="nc" id="L71">                conn = MonitoringDataHolder.getInstance().getMetricsDataSource().getConnection();</span>
+<span class="nc" id="L72">                DatabaseMetaData databaseMetaData = conn.getMetaData();</span>
+<span class="nc" id="L73">                metricsQueryManager = new QueryManager(databaseMetaData.getDatabaseProductName(),</span>
+<span class="nc" id="L74">                        databaseMetaData.getDatabaseProductVersion());</span>
+<span class="nc" id="L75">                workerAttributeTypeMap = DBTableUtils.getInstance().loadMetricsAttributeTypeMap(metricsQueryManager);</span>
+<span class="nc" id="L76">                selectAppMetricsQuery = metricsQueryManager.getQuery(SQLConstants.SELECT_APP_METRICS_QUERY);</span>
+<span class="nc" id="L77">                selectWorkerMetricsQuery = metricsQueryManager.getQuery(SQLConstants.SELECT_WORKER_METRICS_QUERY);</span>
+<span class="nc" id="L78">                selectWorkerThroughputQuery = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_WORKER_THROUGHPUT_QUERY);
+<span class="nc" id="L80">                selectWorkerAggregatedMetricsQuery = metricsQueryManager.getQuery(SQLConstants</span>
+                        .SELECT_WORKER_AGGREGATE_METRICS_QUERY);
+<span class="nc" id="L82">                selectWorkerAggregatedThroughputQuery = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_WORKER_AGGREGATE_THROUGHPUT_QUERY);
+<span class="nc" id="L84">                selectAppComponentList = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_COMPONENT_LIST);
+<span class="nc" id="L86">                selectAppComponentHistory = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_COMPONENT_METRICS_HISTORY);
+<span class="nc" id="L88">                recordSelectAggregatedAppMetricsQuery = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_APP_AGG_METRICS_HISTORY);
+<span class="nc" id="L90">                selectAppComponentAggregatedHistory = metricsQueryManager.getQuery(SQLConstants.</span>
+                        SELECT_COMPONENT_AGG_METRICS_HISTORY);
+<span class="nc" id="L92">            } catch (SQLException | ConfigurationException | QueryMappingNotAvailableException e) {</span>
+<span class="nc" id="L93">                throw new StatusDashboardRuntimeException(&quot;Error initializing connection. &quot;, e);</span>
+            } finally {
+<span class="nc bnc" id="L95" title="All 4 branches missed.">                if (conn != null) {</span>
+                    try {
+<span class="nc" id="L97">                        conn.close();</span>
+<span class="nc" id="L98">                    } catch (SQLException e) {</span>
+<span class="nc" id="L99">                        logger.warn(&quot;Database error. Could not close database connection&quot;, e);</span>
+<span class="nc" id="L100">                    }</span>
+                }
+<span class="nc" id="L102">            }</span>
+        } else {
+<span class="nc" id="L104">            logger.warn(DATASOURCE_ID + &quot; Could not find. Hence cannot initialize the status dashboard.&quot;);</span>
+        }
+<span class="nc" id="L106">    }</span>
+    
+    
+    /**
+     * This resolve the table name in generic tables.
+     *
+     * @param query loaded queries.
+     * @return table name resolving.
+     */
+    private String resolveTableName(String query, String tableName) {
+<span class="nc" id="L116">        return query.replace(PLACEHOLDER_TABLE_NAME, tableName);</span>
+    }
+    
+    /**
+     * Returns a connection instance.
+     *
+     * @return a new {@link Connection} instance from the datasource.
+     */
+    private Connection getConnection() {
+<span class="nc" id="L125">        return DBHandler.getInstance().getConnection(dataSource);</span>
+    }
+    
+    /**
+     * Method which can be used to clear up and ephemeral SQL connectivity artifacts.
+     *
+     * @param conn {@link Connection} instance (can be null)
+     */
+    public static void cleanupConnection(Connection conn) {
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (conn != null) {</span>
+            try {
+<span class="nc" id="L136">                conn.close();</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">                if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L138">                    logger.debug(&quot;Closed Connection  in Metrics DB&quot;);</span>
+                }
+<span class="nc" id="L140">            } catch (SQLException e) {</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">                if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L142">                    logger.debug(&quot;Error closing Connection in metrics DB : &quot; + e.getMessage(), e);</span>
+                }
+<span class="nc" id="L144">            }</span>
+        }
+<span class="nc" id="L146">    }</span>
+    
+    /**
+     * Select the component History .
+     *
+     * @param workerId         ID of the worker
+     * @param appName          siddhi application name
+     * @param timeInterval     time interval that needed to be taken.
+     * @param currentTimeMilli current time in milliseconds expression in db type
+     * @param metricsType      table name to be fetched
+     * @return
+     */
+    public List&lt;List&lt;Object&gt;&gt; selectAppComponentsHistory(String workerId, String appName, long timeInterval, long
+            currentTimeMilli, String metricsType, String componentType, String componentId, boolean isCount) {
+<span class="nc" id="L160">        Map&lt;String, String&gt; typeTableColumn = DBTableUtils.getInstance().loadMetricsTypeSelection();</span>
+<span class="nc" id="L161">        String tableName = typeTableColumn.get(metricsType);</span>
+<span class="nc" id="L162">        String componentName = APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR + &quot;Siddhi&quot; + PACKAGE_NAME_SEPARATOR</span>
+                + componentType + PACKAGE_NAME_SEPARATOR + componentId + PACKAGE_NAME_SEPARATOR + metricsType;
+<span class="nc" id="L164">        String resolvedSelectWorkerMetricsHistoryQuery = resolveTableName(selectAppComponentHistory, tableName);</span>
+<span class="nc" id="L165">        String resolvedQuery = resolvedSelectWorkerMetricsHistoryQuery.replace(SQLConstants.PLACEHOLDER_BEGIN_TIME,</span>
+<span class="nc" id="L166">                QUESTION_MARK).replace(PLACEHOLDER_NAME, QUESTION_MARK).replace</span>
+<span class="nc" id="L167">                (PLACEHOLDER_WORKER_ID, QUESTION_MARK).replace(SQLConstants.PLACEHOLDER_CURRENT_TIME,</span>
+                QUESTION_MARK);
+<span class="nc bnc" id="L169" title="All 2 branches missed.">        if (!isCount) {</span>
+<span class="nc" id="L170">            Map&lt;String, String&gt; tableColumn = DBTableUtils.getInstance().loadMetricsAllValueSelection();</span>
+<span class="nc" id="L171">            resolvedQuery = resolvedQuery.replace(PLACEHOLDER_COLUMNS, tableColumn.get(tableName));</span>
+<span class="nc" id="L172">            Object[] parameters = new Object[] {workerId, componentName + PERCENTAGE_MARK,</span>
+<span class="nc" id="L173">                    currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L174">            return select(resolvedQuery, tableColumn.get(tableName), tableName, parameters);</span>
+        } else {
+<span class="nc" id="L176">            resolvedQuery = resolvedQuery.replace(PLACEHOLDER_COLUMNS, COLUMN_COUNT);</span>
+<span class="nc" id="L177">            Object[] parameters = new Object[] {workerId, componentName + PERCENTAGE_MARK,</span>
+<span class="nc" id="L178">                    currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L179">            return select(resolvedQuery, COLUMN_COUNT, tableName, parameters);</span>
+        }
+    }
+    
+    /**
+     * Select the component History .
+     *
+     * @param workerId         ID of the worker
+     * @param appName          siddhi application name
+     * @param timeInterval     time interval that needed to be taken.
+     * @param currentTimeMilli current time in milliseconds expression in db type
+     * @param metricsType      table name to be fetched
+     * @return
+     */
+    public List&lt;List&lt;Object&gt;&gt; selectAppComponentsAggHistory(String workerId, String appName, long timeInterval, long
+            currentTimeMilli, String metricsType, String componentType, String componentId, boolean isCount) {
+<span class="nc" id="L195">        long aggregationTime = DBTableUtils.getAggregation(timeInterval);</span>
+<span class="nc" id="L196">        Map&lt;String, String&gt; typeTableColumn = DBTableUtils.getInstance().loadMetricsTypeSelection();</span>
+<span class="nc" id="L197">        String tableName = typeTableColumn.get(metricsType);</span>
+<span class="nc" id="L198">        String componentName = APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR + &quot;Siddhi&quot; +</span>
+                PACKAGE_NAME_SEPARATOR + componentType + PACKAGE_NAME_SEPARATOR + componentId +
+                PACKAGE_NAME_SEPARATOR + metricsType;
+<span class="nc" id="L201">        String resolvedSelectWorkerMetricsHistoryQuery = resolveTableName</span>
+<span class="nc" id="L202">                (selectAppComponentAggregatedHistory, tableName);</span>
+<span class="nc" id="L203">        String resolvedQuery = resolvedSelectWorkerMetricsHistoryQuery</span>
+<span class="nc" id="L204">                .replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L205">                .replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L206">                .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L207">                .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L208">                .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">        if (!isCount) {</span>
+<span class="nc" id="L210">            Map&lt;String, String&gt; tableAggColumn = DBTableUtils.getInstance().loadAggMetricsAllValueSelection();</span>
+<span class="nc" id="L211">            Map&lt;String, String&gt; tableColumn = DBTableUtils.getInstance().loadAggRowMetricsAllValueSelection();</span>
+<span class="nc" id="L212">            resolvedQuery = resolvedQuery.replace(PLACEHOLDER_AGGREGATION_COMPONENT_COLOUM, tableAggColumn</span>
+<span class="nc" id="L213">                    .get(tableName));</span>
+<span class="nc" id="L214">            Object[] parameters = new Object[] {workerId, componentName + PERCENTAGE_MARK,</span>
+<span class="nc" id="L215">                    currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L216">            return select(resolvedQuery, tableColumn.get(tableName), tableName, parameters);</span>
+        } else {
+<span class="nc" id="L218">            resolvedQuery = resolvedQuery.replace(PLACEHOLDER_AGGREGATION_COMPONENT_COLOUM, AGG_AVG_COLUMN_COUNT);</span>
+<span class="nc" id="L219">            Object[] parameters = new Object[] {workerId, componentName + PERCENTAGE_MARK,</span>
+<span class="nc" id="L220">                    currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L221">            return select(resolvedQuery, AGG_COLUMN_COUNT, tableName, parameters);</span>
+        }
+    }
+    
+    /**
+     * Select the component list of the siddhi app.
+     *
+     * @param workerId         ID of the worker
+     * @param appName          siddhi application name
+     * @param timeInterval     time interval that needed to be taken.
+     * @param currentTimeMilli current time in milliseconds expression in db type
+     * @return component List
+     */
+    public Map&lt;String, List&lt;String&gt;&gt; selectAppComponentsList(String workerId, String appName, int timeInterval, long
+            currentTimeMilli) {
+<span class="nc" id="L236">        Map&lt;String, List&lt;String&gt;&gt; allComponentsNames = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">        for (String tableName : METRICS_TABLE_NAMES) {</span>
+<span class="nc" id="L238">            List&lt;String&gt; subComponentsList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L239">            String resolvedSelectWorkerMetricsQuery = resolveTableName(selectAppComponentList, tableName);</span>
+<span class="nc" id="L240">            String resolvedQuery = resolvedSelectWorkerMetricsQuery</span>
+<span class="nc" id="L241">                    .replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L242">                    .replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L243">                    .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L244">                    .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK);</span>
+<span class="nc" id="L245">            Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR +</span>
+<span class="nc" id="L246">                    PERCENTAGE_MARK, currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L247">            List&lt;List&lt;Object&gt;&gt; list = select(resolvedQuery, COLUMN_NAME, tableName, parameters);</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">            if (!list.isEmpty()) {</span>
+<span class="nc bnc" id="L249" title="All 2 branches missed.">                for (Object app : list) {</span>
+<span class="nc" id="L250">                    subComponentsList.add((String) ((ArrayList) app).get(0));</span>
+<span class="nc" id="L251">                }</span>
+            }
+<span class="nc bnc" id="L253" title="All 2 branches missed.">            for (String componentMetricsName : subComponentsList) {</span>
+<span class="nc" id="L254">                String componentName = componentMetricsName.substring(0, componentMetricsName.lastIndexOf(&quot;.&quot;));</span>
+<span class="nc" id="L255">                List&lt;String&gt; existingList = allComponentsNames.get(componentName);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">                if (existingList == null) {</span>
+<span class="nc" id="L257">                    List&lt;String&gt; newList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L258">                    newList.add(tableName);</span>
+<span class="nc" id="L259">                    allComponentsNames.put(componentName, newList);</span>
+<span class="nc" id="L260">                } else {</span>
+<span class="nc" id="L261">                    existingList.add(tableName);</span>
+<span class="nc" id="L262">                    allComponentsNames.put(componentName, existingList);</span>
+                }
+<span class="nc" id="L264">            }</span>
+        }
+<span class="nc" id="L266">        return allComponentsNames;</span>
+    }
+    
+    /**
+     * Select the last Metrics value of components in a particular table.
+     *
+     * @param carbonId   carbon id of a worker.
+     * @param components component list of the worker.
+     * @return
+     */
+    public List selectComponentsLastMetric(String carbonId, String appName, Map&lt;String, List&lt;String&gt;&gt; components,
+                                           long timeInterval, long currentTimeMilli) {
+<span class="nc" id="L278">        Map&lt;String, String&gt; tableMetricsMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L279" title="All 2 branches missed.">        for (Map.Entry&lt;String, String&gt; entry : DBTableUtils.getInstance().loadMetricsTypeSelection().entrySet()) {</span>
+<span class="nc" id="L280">            tableMetricsMap.put(entry.getValue(), entry.getKey());</span>
+<span class="nc" id="L281">        }</span>
+<span class="nc" id="L282">        Map&lt;String, String&gt; tableMetricsUnitsMap = DBTableUtils.getInstance().loadMetricsUnitsSelection();</span>
+<span class="nc" id="L283">        Map&lt;String, String&gt; tableColumn = DBTableUtils.getInstance().loadMetricsValueSelection();</span>
+<span class="nc" id="L284">        List&lt;TypeMetrics&gt; componentsRecentMetrics = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L285">        MetricElement metricElement = new MetricElement();</span>
+<span class="nc" id="L286">        ComponentMetrics componentMetrics = new ComponentMetrics();</span>
+<span class="nc" id="L287">        TypeMetrics typeMetrics = new TypeMetrics();</span>
+<span class="nc bnc" id="L288" title="All 2 branches missed.">        for (Map.Entry componentEntry : components.entrySet()) {</span>
+<span class="nc" id="L289">            List&lt;String&gt; componentsTableList = (List&lt;String&gt;) componentEntry.getValue();</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">            for (String tableEntry : componentsTableList) {</span>
+<span class="nc" id="L291">                String columnListString = tableColumn.get(tableEntry);</span>
+<span class="nc" id="L292">                String resolvedSelectWorkerRecentMetricsQuery = resolveTableName(selectAppComponentHistory,</span>
+                        tableEntry);
+<span class="nc" id="L294">                String resolvedRecentQuery = resolvedSelectWorkerRecentMetricsQuery</span>
+<span class="nc" id="L295">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK).replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L296">                        .replace(PLACEHOLDER_COLUMNS, columnListString)</span>
+<span class="nc" id="L297">                        .replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L298">                        .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK);</span>
+<span class="nc" id="L299">                Object[] recentQueryParameters = new Object[] {carbonId,</span>
+<span class="nc" id="L300">                        String.format(STRING_TEMPLATE + STRING_TEMPLATE + STRING_TEMPLATE</span>
+<span class="nc" id="L301">                                , componentEntry.getKey(), PACKAGE_NAME_SEPARATOR, PERCENTAGE_MARK),</span>
+<span class="nc" id="L302">                        currentTimeMilli - timeInterval, currentTimeMilli};</span>
+<span class="nc" id="L303">                String[] columnList = columnListString.split(SEPARATOR_REGEX);</span>
+<span class="nc" id="L304">                List&lt;List&lt;Object&gt;&gt; selectionRecent =</span>
+<span class="nc" id="L305">                        select(resolvedRecentQuery, columnListString, tableEntry, recentQueryParameters);</span>
+<span class="nc" id="L306">                List&lt;Object&gt; selection = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L307" title="All 2 branches missed.">                if (selectionRecent.size() &gt; 0) {</span>
+<span class="nc" id="L308">                    selection = selectionRecent.get(selectionRecent.size() - 1);</span>
+                }
+<span class="nc" id="L310">                String[] componentElements = ((String) componentEntry.getKey()).replace(APP_NAME_PREFIX + appName</span>
+                        + PACKAGE_NAME_SEPARATOR + &quot;Siddhi&quot; + PACKAGE_NAME_SEPARATOR, &quot;&quot;)
+<span class="nc" id="L312">                        .split(&quot;\\.&quot;, 2);</span>
+<span class="nc" id="L313">                String metricType = tableMetricsMap.get(tableEntry).toLowerCase();</span>
+<span class="nc bnc" id="L314" title="All 4 branches missed.">                if ((selection != null) &amp;&amp; (!selection.isEmpty())) {</span>
+                    Attribute attribute;
+<span class="nc bnc" id="L316" title="All 2 branches missed.">                    if ((!(&quot;Streams&quot;.equalsIgnoreCase(componentElements[0]))) &amp;&amp;</span>
+<span class="nc bnc" id="L317" title="All 2 branches missed.">                            (&quot;memory&quot;.equalsIgnoreCase(metricType))) {</span>
+<span class="nc" id="L318">                        attribute = new Attribute(columnList[1], humanReadableByteCount((double) selection.get(1),</span>
+                                true));
+                    } else {
+<span class="nc" id="L321">                        attribute = new Attribute(columnList[1], NumberFormat.getNumberInstance().</span>
+<span class="nc" id="L322">                                format(selection.get(1)));</span>
+                    }
+<span class="nc" id="L324">                    attribute.setRecentValues(selectionRecent);</span>
+<span class="nc" id="L325">                    metricElement.addAttributes(attribute);</span>
+<span class="nc bnc" id="L326" title="All 2 branches missed.">                    if ((&quot;Streams&quot;.equalsIgnoreCase(componentElements[0])) &amp;&amp;</span>
+<span class="nc bnc" id="L327" title="All 2 branches missed.">                            (&quot;memory&quot;.equalsIgnoreCase(metricType))) {</span>
+<span class="nc" id="L328">                        metricElement.setType(&quot;size (events)&quot;);</span>
+                    } else {
+<span class="nc" id="L330">                        metricElement.setType(metricType + &quot; &quot; + tableMetricsUnitsMap.get(metricType));</span>
+                    }
+<span class="nc" id="L332">                    componentMetrics.addMetrics(metricElement);</span>
+<span class="nc" id="L333">                    if (selectAppComponentsHistory</span>
+<span class="nc" id="L334">                            (carbonId, appName, timeInterval, System.currentTimeMillis(), METRICS_TYPE_THROUGHPUT,</span>
+<span class="nc bnc" id="L335" title="All 2 branches missed.">                                    componentElements[0], componentElements[1], true).size() &gt; 0) {</span>
+                        
+                    }
+<span class="nc" id="L338">                    componentMetrics.setTotalEvents(getEventsCount(componentElements[0], componentElements[1],</span>
+                            carbonId, appName, timeInterval));
+<span class="nc" id="L340">                    metricElement = new MetricElement();</span>
+<span class="nc" id="L341">                    componentMetrics.setName(componentElements[1]);</span>
+<span class="nc" id="L342">                    typeMetrics.setType(componentElements[0]);</span>
+<span class="nc" id="L343">                    typeMetrics.setData(componentMetrics);</span>
+                }
+<span class="nc" id="L345">            }</span>
+<span class="nc" id="L346">            boolean isNew = true;</span>
+<span class="nc bnc" id="L347" title="All 2 branches missed.">            for (TypeMetrics typeMetric : componentsRecentMetrics) {</span>
+<span class="nc bnc" id="L348" title="All 2 branches missed.">                if (typeMetric.getType().equalsIgnoreCase(typeMetrics.getType())) {</span>
+<span class="nc" id="L349">                    isNew = false;</span>
+<span class="nc" id="L350">                    typeMetric.getData().add(typeMetrics.getData().get(0));</span>
+                }
+<span class="nc" id="L352">            }</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">            if (isNew) {</span>
+<span class="nc" id="L354">                componentsRecentMetrics.add(typeMetrics);</span>
+            }
+<span class="nc" id="L356">            componentMetrics = new ComponentMetrics();</span>
+<span class="nc" id="L357">            typeMetrics = new TypeMetrics();</span>
+<span class="nc" id="L358">        }</span>
+<span class="nc" id="L359">        return componentsRecentMetrics;</span>
+    }
+    
+    private long getEventsCount(String componentType, String componentId, String carbonId, String appName,
+                                long timeInterval) {
+        
+<span class="nc bnc" id="L365" title="All 32 branches missed.">        switch (componentType.toLowerCase()) {</span>
+            case &quot;sinks&quot;:
+            case &quot;sources&quot;:
+            case &quot;trigger&quot;:
+            case &quot;streams&quot;: {
+<span class="nc" id="L370">                List&lt;List&lt;Object&gt;&gt; metrics = selectAppComponentsHistory</span>
+<span class="nc" id="L371">                        (carbonId, appName, timeInterval, System.currentTimeMillis(), METRICS_TYPE_THROUGHPUT,</span>
+                                componentType, componentId, true);
+<span class="nc bnc" id="L373" title="All 2 branches missed.">                if (metrics.size() &gt; 0) {</span>
+<span class="nc" id="L374">                    return (long) metrics.get(0).get(1);</span>
+                } else {
+<span class="nc" id="L376">                    return 0;</span>
+                }
+            }
+            case &quot;sinkmappers&quot;:
+            case &quot;sourcemappers&quot;:
+            case &quot;queries&quot;:
+            case &quot;storequeries&quot;: {
+<span class="nc" id="L383">                List&lt;List&lt;Object&gt;&gt; metrics = selectAppComponentsHistory</span>
+<span class="nc" id="L384">                        (carbonId, appName, timeInterval, System.currentTimeMillis(), METRICS_TYPE_LATENCY,</span>
+                                componentType, componentId, true);
+<span class="nc bnc" id="L386" title="All 2 branches missed.">                if (metrics.size() &gt; 0) {</span>
+<span class="nc" id="L387">                    return (long) metrics.get(0).get(1);</span>
+                } else {
+<span class="nc" id="L389">                    return 0;</span>
+                }
+            }
+            case &quot;tables&quot;: {
+<span class="nc" id="L393">                List&lt;List&lt;Object&gt;&gt; metricsLatency = selectAppComponentsHistory</span>
+<span class="nc" id="L394">                        (carbonId, appName, timeInterval, System.currentTimeMillis(), METRICS_TYPE_LATENCY,</span>
+                                componentType, componentId, true);
+<span class="nc" id="L396">                List&lt;List&lt;Object&gt;&gt; metricsThroughput = selectAppComponentsHistory</span>
+<span class="nc" id="L397">                        (carbonId, appName, timeInterval, System.currentTimeMillis(), METRICS_TYPE_THROUGHPUT,</span>
+                                componentType, componentId, true);
+<span class="nc bnc" id="L399" title="All 4 branches missed.">                if ((metricsLatency.size() == 0) &amp;&amp; (metricsThroughput.size() == 0)) {</span>
+<span class="nc" id="L400">                    return 0;</span>
+<span class="nc bnc" id="L401" title="All 2 branches missed.">                } else if (metricsLatency.size() == 0) {</span>
+<span class="nc" id="L402">                    return (long) metricsThroughput.get(0).get(1);</span>
+<span class="nc bnc" id="L403" title="All 2 branches missed.">                } else if (metricsThroughput.size() == 0) {</span>
+<span class="nc" id="L404">                    return (long) metricsLatency.get(0).get(1);</span>
+                } else {
+<span class="nc" id="L406">                    return Math.max((long) metricsLatency.get(0).get(1), (long) metricsThroughput.get(0).get(1));</span>
+                }
+            }
+            default: {
+<span class="nc" id="L410">                throw new StatusDashboardRuntimeException(&quot;Metrics type '&quot; + componentType.toLowerCase() +</span>
+                        &quot;' not valid.&quot;);
+            }
+            
+        }
+    }
+    
+    /**
+     * Convert memory bytes into human readable format.
+     * unit bytes value is decided by based on SI format or not.
+     * Ref:
+     * http://programming.guide/java/formatting-byte-size-to-human-readable-format.html
+     *
+     * @param bytes memory bytes
+     * @param si    is is format needed.
+     * @return is format.
+     */
+    private static String humanReadableByteCount(double bytes, boolean si) {
+<span class="nc bnc" id="L428" title="All 2 branches missed.">        int unit = si ? 1000 : 1024;</span>
+<span class="nc bnc" id="L429" title="All 2 branches missed.">        if (bytes &lt; unit) {</span>
+<span class="nc" id="L430">            return bytes + &quot; B&quot;;</span>
+        }
+<span class="nc" id="L432">        int exp = (int) (Math.log(bytes) / Math.log(unit));</span>
+<span class="nc bnc" id="L433" title="All 4 branches missed.">        String pre = (si ? &quot;kMGTPE&quot; : &quot;KMGTPE&quot;).charAt(exp - 1) + (si ? &quot;&quot; : &quot;i&quot;);</span>
+<span class="nc" id="L434">        return String.format(&quot;%.1f %sB&quot;, bytes / Math.pow(unit, exp), pre);</span>
+    }
+    
+    /**
+     * This method resold the MetricElement query by replacing the values.
+     *
+     * @param workerId     workerID
+     * @param timeInterval timeInterval
+     * @param appName      siddhi app name
+     * @param currentTime  current time expression.
+     * @return selected list of metrics.
+     */
+    public List selectAppOverallMetrics(String metricsType, String workerId, long
+            timeInterval, String appName, long currentTime) {
+<span class="nc bnc" id="L448" title="All 14 branches missed.">        switch (metricsType) {</span>
+            case &quot;memory&quot;: {
+<span class="nc" id="L450">                String resolvedQueryTable = selectAppMetricsQuery.replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L451">                        EXPR_SUM_FROM_STRING).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L452">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L453">                        .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L454">                        .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L455">                        .replace(PLACEHOLDER_RESULT, COLUMN_VALUE)</span>
+<span class="nc" id="L456">                        .replace(PLACEHOLDER_TABLE_NAME, METRICS_TABLE_METRIC_GAUGE);</span>
+<span class="nc" id="L457">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR +</span>
+<span class="nc" id="L458">                        PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L459">                return selectAppMemory(resolvedQueryTable, METRICS_TABLE_METRIC_GAUGE, parameters,</span>
+                        COLUMN_TIMESTAMP);
+            }
+            case &quot;throughput&quot;: {
+<span class="nc" id="L463">                String resolvedQueryTable = selectAppMetricsQuery.replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L464">                        EXPR_SUM_FROM_M1_RATE).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L465">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK).replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L466">                        .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L467">                        .replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE)</span>
+<span class="nc" id="L468">                        .replace(PLACEHOLDER_TABLE_NAME, METRICS_TABLE_METRIC_METER);</span>
+<span class="nc" id="L469">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR +</span>
+<span class="nc" id="L470">                        PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L471">                return select(resolvedQueryTable, COLUMN_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE,</span>
+                        METRICS_TABLE_METRIC_METER, parameters);
+            }
+            case &quot;latency&quot;: {
+<span class="nc" id="L475">                String resolvedQueryTable = selectAppMetricsQuery.replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L476">                        EXPR_SUM_FROM_M1_RATE).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L477">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK).replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L478">                        .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L479">                        .replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE)</span>
+<span class="nc" id="L480">                        .replace(PLACEHOLDER_TABLE_NAME, METRICS_TABLE_METRIC_TIMER);</span>
+<span class="nc" id="L481">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR +</span>
+<span class="nc" id="L482">                        PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L483">                return select(resolvedQueryTable, COLUMN_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE</span>
+                        , METRICS_TABLE_METRIC_TIMER, parameters);
+            }
+            default: {
+<span class="nc" id="L487">                logger.error(&quot;Invalid parameters type: &quot; + removeCRLFCharacters(workerId) + &quot;:&quot;</span>
+<span class="nc" id="L488">                        + removeCRLFCharacters(appName));</span>
+<span class="nc" id="L489">                return null;</span>
+            }
+        }
+    }
+    
+    /**
+     * This method resold the MetricElement query by replacing the values.
+     *
+     * @param workerId     workerID
+     * @param timeInterval timeInterval
+     * @param appName      siddhi app name
+     * @param currentTime  current time expression.
+     * @return selected list of metrics.
+     */
+    public List selectAppAggOverallMetrics(String metricsType, String workerId, long
+            timeInterval, String appName, long currentTime) {
+<span class="nc" id="L505">        long aggregationTime = DBTableUtils.getAggregation(timeInterval);</span>
+<span class="nc bnc" id="L506" title="All 14 branches missed.">        switch (metricsType) {</span>
+            case &quot;memory&quot;: {
+<span class="nc" id="L508">                String tableName = METRICS_TABLE_METRIC_GAUGE;</span>
+<span class="nc" id="L509">                String resolvedQueryTable = recordSelectAggregatedAppMetricsQuery</span>
+<span class="nc" id="L510">                        .replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L511">                                EXPR_SUM_FROM_STRING).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L512">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L513">                        .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L514">                        .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L515">                        .replace(PLACEHOLDER_RESULT, COLUMN_VALUE)</span>
+<span class="nc" id="L516">                        .replace(PLACEHOLDER_TABLE_NAME, tableName)</span>
+<span class="nc" id="L517">                        .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc" id="L518">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR</span>
+<span class="nc" id="L519">                        + PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L520">                return selectAppMemory(resolvedQueryTable, tableName, parameters, COLUMN_AGG_TIMESTAMP);</span>
+            }
+            case &quot;throughput&quot;: {
+<span class="nc" id="L523">                String resolvedQueryTable = recordSelectAggregatedAppMetricsQuery</span>
+<span class="nc" id="L524">                        .replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L525">                                EXPR_SUM_FROM_M1_RATE).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L526">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK).replace</span>
+<span class="nc" id="L527">                                (PLACEHOLDER_WORKER_ID, QUESTION_MARK).replace(SQLConstants.PLACEHOLDER_CURRENT_TIME,</span>
+<span class="nc" id="L528">                                QUESTION_MARK).replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE)</span>
+<span class="nc" id="L529">                        .replace(PLACEHOLDER_TABLE_NAME, METRICS_TABLE_METRIC_METER)</span>
+<span class="nc" id="L530">                        .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc" id="L531">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR</span>
+<span class="nc" id="L532">                        + PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L533">                return select(resolvedQueryTable, COLUMN_AGG_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE</span>
+                        , METRICS_TABLE_METRIC_METER, parameters);
+            }
+            case &quot;latency&quot;: {
+<span class="nc" id="L537">                String resolvedQueryTable = recordSelectAggregatedAppMetricsQuery</span>
+<span class="nc" id="L538">                        .replace(SQLConstants.PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L539">                                EXPR_SUM_FROM_M1_RATE).replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L540">                        .replace(PLACEHOLDER_NAME, QUESTION_MARK).replace</span>
+<span class="nc" id="L541">                                (PLACEHOLDER_WORKER_ID, QUESTION_MARK).replace(SQLConstants.PLACEHOLDER_CURRENT_TIME,</span>
+<span class="nc" id="L542">                                QUESTION_MARK).replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE)</span>
+<span class="nc" id="L543">                        .replace(PLACEHOLDER_TABLE_NAME, METRICS_TABLE_METRIC_TIMER)</span>
+<span class="nc" id="L544">                        .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc" id="L545">                Object[] parameters = new Object[] {workerId, APP_NAME_PREFIX + appName + PACKAGE_NAME_SEPARATOR</span>
+<span class="nc" id="L546">                        + PERCENTAGE_MARK, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L547">                return select(resolvedQueryTable, COLUMN_AGG_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE,</span>
+                        METRICS_TABLE_METRIC_TIMER, parameters);
+            }
+            default: {
+<span class="nc" id="L551">                logger.error(&quot;Invalid parameters type: &quot; + removeCRLFCharacters(workerId) + &quot;:&quot;</span>
+<span class="nc" id="L552">                        + removeCRLFCharacters(appName));</span>
+<span class="nc" id="L553">                return null;</span>
+            }
+        }
+    }
+    
+    /**
+     * Used to get the metrics gauges of jvm metrics.
+     *
+     * @param workerId       source ID of the metrics.
+     * @param timeInterval   time interval that needed to be taken.
+     * @param metricTypeName metrics type name ex: memory,cpu
+     * @param currentTime    current time in milliseconds.
+     * @return List&lt;List&lt;Object&gt;&gt; of metrics data because charts needed in that format
+     */
+    public List selectWorkerMetrics(String workerId, long timeInterval, String metricTypeName, long
+            currentTime) {
+<span class="nc" id="L569">        String resolvedSelectWorkerMetricsQuery = resolveTableName(selectWorkerMetricsQuery,</span>
+                METRICS_TABLE_METRIC_GAUGE);
+<span class="nc" id="L571">        String resolvedQuery = resolvedSelectWorkerMetricsQuery.replace(SQLConstants.PLACEHOLDER_BEGIN_TIME,</span>
+<span class="nc" id="L572">                QUESTION_MARK).replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L573">                .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L574">                .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK);</span>
+<span class="nc" id="L575">        Object[] parameters = new Object[] {workerId, metricTypeName, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L576">        return selectGauge(resolvedQuery, false, parameters);</span>
+    }
+    
+    /**
+     * Used to get the metrics gauges of jvm metrics.
+     *
+     * @param workerId       source ID of the metrics.
+     * @param timeInterval   time interval that needed to be taken.
+     * @param metricTypeName metrics type name ex: memory,cpu
+     * @param currentTime    current time in milliseconds.
+     * @return List&lt;List&lt;Object&gt;&gt; of metrics data because charts needed in that format
+     */
+    public List selectWorkerAggregatedMetrics(String workerId, long timeInterval, String metricTypeName, long
+            currentTime) {
+<span class="nc" id="L590">        long aggregationTime = DBTableUtils.getAggregation(timeInterval);</span>
+<span class="nc" id="L591">        String resolvedSelectWorkerMetricsQuery = resolveTableName(</span>
+                selectWorkerAggregatedMetricsQuery, METRICS_TABLE_METRIC_GAUGE);
+<span class="nc" id="L593">        String resolvedQuery = resolvedSelectWorkerMetricsQuery.replace(SQLConstants.PLACEHOLDER_BEGIN_TIME,</span>
+<span class="nc" id="L594">                QUESTION_MARK).replace(PLACEHOLDER_NAME, QUESTION_MARK)</span>
+<span class="nc" id="L595">                .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L596">                .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L597">                .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc" id="L598">        Object[] parameters = new Object[] {workerId, metricTypeName, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L599">        return selectGauge(resolvedQuery, true, parameters);</span>
+    }
+    
+    /**
+     * Used to ge the overall throughput of the worker.
+     *
+     * @param workerId     source id of the metrics
+     * @param timeInterval time interval that metrics needed to be taken.
+     * @param currentTime  current time
+     * @return List&lt;List&lt;Object&gt;&gt; of metrics data because charts needed in that format
+     */
+    public List selectWorkerThroughput(String workerId, long timeInterval, long currentTime) {
+<span class="nc" id="L611">        String resolvedSelectWorkerThroughputQuery = resolveTableName(selectWorkerThroughputQuery,</span>
+                METRICS_TABLE_METRIC_METER);
+<span class="nc" id="L613">        String resolvedQuery = resolvedSelectWorkerThroughputQuery</span>
+<span class="nc" id="L614">                .replace(SQLConstants.PLACEHOLDER_COLUMNS, EXPR_SUM_FROM_M1_RATE)</span>
+<span class="nc" id="L615">                .replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L616">                .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L617">                .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L618">                .replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE);</span>
+<span class="nc" id="L619">        Object[] parameters = new Object[] {workerId, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L620">        return select(resolvedQuery, COLUMN_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE,</span>
+                METRICS_TABLE_METRIC_METER, parameters);
+    }
+    
+    /**
+     * Used to ge the overall throughput of the worker.
+     *
+     * @param workerId     source id of the metrics
+     * @param timeInterval time interval that metrics needed to be taken.
+     * @param currentTime  current time
+     * @return List&lt;List&lt;Object&gt;&gt; of metrics data because charts needed in that format
+     */
+    public List selectWorkerAggregatedThroughput(String workerId, long timeInterval, long currentTime) {
+<span class="nc" id="L633">        long aggregationTime = DBTableUtils.getAggregation(timeInterval);</span>
+<span class="nc" id="L634">        String resolvedSelectWorkerThroughputQuery = resolveTableName(selectWorkerAggregatedThroughputQuery,</span>
+                METRICS_TABLE_METRIC_METER);
+<span class="nc" id="L636">        String resolvedQuery = resolvedSelectWorkerThroughputQuery</span>
+<span class="nc" id="L637">                .replace(SQLConstants.PLACEHOLDER_COLUMNS, EXPR_SUM_FROM_M1_RATE)</span>
+<span class="nc" id="L638">                .replace(SQLConstants.PLACEHOLDER_BEGIN_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L639">                .replace(PLACEHOLDER_WORKER_ID, QUESTION_MARK)</span>
+<span class="nc" id="L640">                .replace(SQLConstants.PLACEHOLDER_CURRENT_TIME, QUESTION_MARK)</span>
+<span class="nc" id="L641">                .replace(PLACEHOLDER_RESULT, COLUMN_M1_RATE)</span>
+<span class="nc" id="L642">                .replace(PLACEHOLDER_AGGREGATION_TIME, Long.toString(aggregationTime));</span>
+<span class="nc" id="L643">        Object[] parameters = new Object[] {workerId, currentTime - timeInterval, currentTime};</span>
+<span class="nc" id="L644">        return select(resolvedQuery, COLUMN_AGG_TIMESTAMP + SEPARATOR + COLUMN_M1_RATE,</span>
+                METRICS_TABLE_METRIC_METER, parameters);
+    }
+    
+    /**
+     * Select the metrics of the siddhi app.
+     *
+     * @param query selection query.
+     * @return the selected object.
+     */
+    private List&lt;List&lt;Object&gt;&gt; selectAppMemory(String query, String tableName, Object[] parameters,
+                                               String timesStampLabel) {
+<span class="nc" id="L656">        Map&lt;String, String&gt; attributesTypeMap = workerAttributeTypeMap.get(tableName);</span>
+<span class="nc" id="L657">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L658">        ResultSet rs = null;</span>
+<span class="nc" id="L659">        List&lt;List&lt;Object&gt;&gt; tuple = new ArrayList&lt;&gt;();</span>
+        List&lt;Object&gt; row;
+<span class="nc" id="L661">        PreparedStatement stmt = null;</span>
+        try {
+<span class="nc" id="L663">            stmt = conn.prepareStatement(query);</span>
+<span class="nc" id="L664">            setDynamicValuesToStatement(stmt, parameters);</span>
+<span class="nc" id="L665">            rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc bnc" id="L666" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L667">                row = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L668">                row.add(DBTableUtils.getInstance().fetchData(rs, timesStampLabel, attributesTypeMap.get</span>
+<span class="nc" id="L669">                        (timesStampLabel), metricsQueryManager));</span>
+<span class="nc" id="L670">                row.add(Double.valueOf((String) DBTableUtils.getInstance().fetchData(rs, COLUMN_VALUE,</span>
+<span class="nc" id="L671">                        attributesTypeMap.get(COLUMN_VALUE), metricsQueryManager)));</span>
+<span class="nc" id="L672">                tuple.add(row);</span>
+            }
+<span class="nc" id="L674">        } catch (SQLException e) {</span>
+<span class="nc" id="L675">            throw new RDBMSTableException(&quot;Error retrieving records from table '&quot; + tableName + &quot;': &quot;</span>
+<span class="nc" id="L676">                    + e.getMessage() + &quot; in &quot; + DATASOURCE_ID, e);</span>
+        } finally {
+<span class="nc" id="L678">            try {</span>
+<span class="nc bnc" id="L679" title="All 4 branches missed.">                if (rs != null) {</span>
+<span class="nc" id="L680">                    rs.close();</span>
+                }
+<span class="nc" id="L682">            } catch (SQLException e) {</span>
+                //ignore
+<span class="nc" id="L684">            }</span>
+            try {
+<span class="nc bnc" id="L686" title="All 4 branches missed.">                if (stmt != null) {</span>
+<span class="nc" id="L687">                    stmt.close();</span>
+                }
+<span class="nc" id="L689">            } catch (SQLException e) {</span>
+                //ignore
+<span class="nc" id="L691">            }</span>
+<span class="nc" id="L692">            cleanupConnection(conn);</span>
+<span class="nc" id="L693">        }</span>
+<span class="nc" id="L694">        return tuple;</span>
+    }
+    
+    /**
+     * Select the metrics.
+     *
+     * @param query   selection query.
+     * @param columns column labeles that needed to select.
+     * @return the selected object.
+     */
+    private List&lt;List&lt;Object&gt;&gt; select(String query, String columns, String tableName, Object[] parameters) {
+<span class="nc" id="L705">        Map&lt;String, String&gt; attributesTypeMap = workerAttributeTypeMap.get(tableName);</span>
+<span class="nc" id="L706">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L707">        ResultSet rs = null;</span>
+<span class="nc" id="L708">        List&lt;List&lt;Object&gt;&gt; tuple = new ArrayList&lt;&gt;();</span>
+        List&lt;Object&gt; row;
+<span class="nc" id="L710">        PreparedStatement stmt = null;</span>
+<span class="nc" id="L711">        String[] columnLabels = columns.split(SEPARATOR_REGEX);</span>
+        try {
+<span class="nc" id="L713">            stmt = conn.prepareStatement(query);</span>
+<span class="nc" id="L714">            setDynamicValuesToStatement(stmt, parameters);</span>
+<span class="nc" id="L715">            rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc bnc" id="L716" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L717">                row = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L718" title="All 2 branches missed.">                for (String columnLabel : columnLabels) {</span>
+<span class="nc bnc" id="L719" title="All 2 branches missed.">                    if (columnLabel.equalsIgnoreCase(COLUMN_VALUE)) {</span>
+<span class="nc" id="L720">                        row.add(Double.valueOf((String) DBTableUtils.getInstance().fetchData(</span>
+<span class="nc" id="L721">                                rs, columnLabel, attributesTypeMap.get(columnLabel), metricsQueryManager)));</span>
+                    } else {
+<span class="nc" id="L723">                        row.add(DBTableUtils.getInstance().fetchData(rs, columnLabel, attributesTypeMap.get</span>
+<span class="nc" id="L724">                                (columnLabel), metricsQueryManager));</span>
+                    }
+                }
+<span class="nc" id="L727">                tuple.add(row);</span>
+            }
+<span class="nc" id="L729">        } catch (SQLException e) {</span>
+<span class="nc" id="L730">            throw new RDBMSTableException(&quot;Error retrieving records from table '&quot; + tableName + &quot;': &quot;</span>
+<span class="nc" id="L731">                    + e.getMessage() + &quot; in &quot; + DATASOURCE_ID, e);</span>
+        } finally {
+<span class="nc" id="L733">            try {</span>
+<span class="nc bnc" id="L734" title="All 4 branches missed.">                if (rs != null) {</span>
+<span class="nc" id="L735">                    rs.close();</span>
+                }
+<span class="nc" id="L737">            } catch (SQLException e) {</span>
+                //ignore
+<span class="nc" id="L739">            }</span>
+            try {
+<span class="nc bnc" id="L741" title="All 4 branches missed.">                if (stmt != null) {</span>
+<span class="nc" id="L742">                    stmt.close();</span>
+                }
+<span class="nc" id="L744">            } catch (SQLException e) {</span>
+<span class="nc" id="L745">                logger.error(&quot;Error closing statement while select entries from table '&quot; + tableName + &quot;' caused by&quot;</span>
+<span class="nc" id="L746">                        + e.getMessage(), e);</span>
+                //ignore
+<span class="nc" id="L748">            }</span>
+<span class="nc" id="L749">            cleanupConnection(conn);</span>
+<span class="nc" id="L750">        }</span>
+<span class="nc" id="L751">        return tuple;</span>
+    }
+    
+    /**
+     * Select the metrics.
+     *
+     * @param query selection query.
+     * @return the selected object.
+     */
+    private List&lt;List&lt;Object&gt;&gt; selectGauge(String query, boolean isAggregated, Object[] parameters) {
+<span class="nc" id="L761">        Map&lt;String, String&gt; attributesTypeMap = workerAttributeTypeMap.get(METRICS_TABLE_METRIC_GAUGE);</span>
+<span class="nc" id="L762">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L763">        ResultSet rs = null;</span>
+<span class="nc" id="L764">        List&lt;List&lt;Object&gt;&gt; tuple = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L765">        PreparedStatement stmt = null;</span>
+        List&lt;Object&gt; row;
+        try {
+<span class="nc" id="L768">            stmt = conn.prepareStatement(query);</span>
+<span class="nc" id="L769">            setDynamicValuesToStatement(stmt, parameters);</span>
+<span class="nc" id="L770">            rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc" id="L771">            String timestampCol = COLUMN_TIMESTAMP;</span>
+<span class="nc bnc" id="L772" title="All 2 branches missed.">            if (isAggregated) {</span>
+<span class="nc" id="L773">                timestampCol = COLUMN_AGG_TIMESTAMP;</span>
+            }
+<span class="nc bnc" id="L775" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L776">                row = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L777">                row.add(DBTableUtils.getInstance().fetchData(rs, timestampCol, attributesTypeMap.get</span>
+<span class="nc" id="L778">                        (COLUMN_TIMESTAMP), metricsQueryManager));</span>
+<span class="nc" id="L779">                row.add(Double.valueOf((String) DBTableUtils.getInstance().fetchData(rs, COLUMN_VALUE,</span>
+<span class="nc" id="L780">                        attributesTypeMap.get(COLUMN_VALUE), metricsQueryManager)));</span>
+<span class="nc" id="L781">                tuple.add(row);</span>
+            }
+<span class="nc" id="L783">        } catch (SQLException e) {</span>
+<span class="nc" id="L784">            throw new RDBMSTableException(&quot;Error retrieving records from table '&quot; + METRICS_TABLE_METRIC_GAUGE + &quot;': &quot;</span>
+<span class="nc" id="L785">                    + e.getMessage() + &quot; in &quot; + DATASOURCE_ID, e);</span>
+        } finally {
+            
+<span class="nc bnc" id="L788" title="All 4 branches missed.">            if (rs != null) {</span>
+                try {
+<span class="nc" id="L790">                    rs.close();</span>
+<span class="nc" id="L791">                } catch (SQLException e) {</span>
+                    //ignore
+<span class="nc" id="L793">                }</span>
+            }
+            
+<span class="nc bnc" id="L796" title="All 4 branches missed.">            if (stmt != null) {</span>
+                try {
+<span class="nc" id="L798">                    stmt.close();</span>
+<span class="nc" id="L799">                } catch (SQLException e) {</span>
+                    //ignore
+<span class="nc" id="L801">                }</span>
+            }
+<span class="nc" id="L803">            cleanupConnection(conn);</span>
+<span class="nc" id="L804">        }</span>
+<span class="nc" id="L805">        return tuple;</span>
+    }
+    
+    private static String removeCRLFCharacters(String str) {
+<span class="nc bnc" id="L809" title="All 2 branches missed.">        if (str != null) {</span>
+<span class="nc" id="L810">            str = str.replace('\n', '_').replace('\r', '_');</span>
+        }
+<span class="nc" id="L812">        return str;</span>
+    }
+    
+    private void setDynamicValuesToStatement(PreparedStatement statement, Object[] parameters) throws SQLException {
+<span class="nc" id="L816">        int counter = 1;</span>
+<span class="nc bnc" id="L817" title="All 2 branches missed.">        for (Object parameter : parameters) {</span>
+<span class="nc bnc" id="L818" title="All 2 branches missed.">            if (parameter instanceof String) {</span>
+<span class="nc" id="L819">                statement.setString(counter, (String) parameter);</span>
+<span class="nc bnc" id="L820" title="All 2 branches missed.">            } else if (parameter instanceof Long) {</span>
+<span class="nc" id="L821">                statement.setLong(counter, (Long) parameter);</span>
+<span class="nc bnc" id="L822" title="All 2 branches missed.">            } else if (parameter instanceof Double) {</span>
+<span class="nc" id="L823">                statement.setDouble(counter, (Double) parameter);</span>
+<span class="nc bnc" id="L824" title="All 2 branches missed.">            } else if (parameter instanceof Integer) {</span>
+<span class="nc" id="L825">                statement.setInt(counter, (Integer) parameter);</span>
+<span class="nc bnc" id="L826" title="All 2 branches missed.">            } else if (parameter instanceof Float) {</span>
+<span class="nc" id="L827">                statement.setFloat(counter, (Float) parameter);</span>
+<span class="nc bnc" id="L828" title="All 2 branches missed.">            } else if (parameter instanceof Boolean) {</span>
+<span class="nc" id="L829">                statement.setBoolean(counter, (Boolean) parameter);</span>
+            } else {
+<span class="nc" id="L831">                logger.error(&quot;Invalid Type of Object.Found &quot; + parameter.getClass());</span>
+            }
+<span class="nc" id="L833">            counter++;</span>
+        }
+<span class="nc" id="L835">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

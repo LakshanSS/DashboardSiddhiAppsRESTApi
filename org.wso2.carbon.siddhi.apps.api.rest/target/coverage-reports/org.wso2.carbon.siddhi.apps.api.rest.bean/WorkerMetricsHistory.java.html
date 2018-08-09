@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WorkerMetricsHistory.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.bean</a> &gt; <span class="el_source">WorkerMetricsHistory.java</span></div><h1>WorkerMetricsHistory.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.bean;
+
+import java.util.List;
+
+/**
+ * Model for siddhi app specific metrics.
+ */
+public class WorkerMetricsHistory {
+    private MetricsLineCharts processCPU;
+    private MetricsLineCharts systemCPU;
+    private MetricsLineCharts usedMemory;
+    private MetricsLineCharts committedMemory;
+    private MetricsLineCharts initMemory;
+    private MetricsLineCharts totalMemory;
+    private MetricsLineCharts loadAverage;
+    private MetricsLineCharts throughput;
+    
+<span class="nc" id="L37">    public WorkerMetricsHistory() {</span>
+<span class="nc" id="L38">        processCPU = new MetricsLineCharts();</span>
+<span class="nc" id="L39">        systemCPU = new MetricsLineCharts();</span>
+<span class="nc" id="L40">        usedMemory = new MetricsLineCharts();</span>
+<span class="nc" id="L41">        totalMemory = new MetricsLineCharts();</span>
+<span class="nc" id="L42">        initMemory = new MetricsLineCharts();</span>
+<span class="nc" id="L43">        committedMemory = new MetricsLineCharts();</span>
+<span class="nc" id="L44">        loadAverage = new MetricsLineCharts();</span>
+<span class="nc" id="L45">        throughput = new MetricsLineCharts();</span>
+<span class="nc" id="L46">    }</span>
+    
+    public MetricsLineCharts getProcessCPU() {
+<span class="nc" id="L49">        return processCPU;</span>
+    }
+    
+    public void setProcessCPUData(List&lt;List&lt;Object&gt;&gt; processCPUData) {
+<span class="nc" id="L53">        this.processCPU.setData(processCPUData);</span>
+<span class="nc" id="L54">    }</span>
+    
+    public MetricsLineCharts getSystemCPU() {
+<span class="nc" id="L57">        return systemCPU;</span>
+    }
+    
+    public void setSystemCPU(List&lt;List&lt;Object&gt;&gt; systemCPUData) {
+<span class="nc" id="L61">        this.systemCPU.setData(systemCPUData);</span>
+<span class="nc" id="L62">    }</span>
+    
+    public MetricsLineCharts getUsedMemory() {
+<span class="nc" id="L65">        return usedMemory;</span>
+    }
+    
+    public void setUsedMemory(List&lt;List&lt;Object&gt;&gt; heapMemoryData) {
+<span class="nc" id="L69">        this.usedMemory.setData(heapMemoryData);</span>
+<span class="nc" id="L70">    }</span>
+    
+    public MetricsLineCharts getTotalMemory() {
+<span class="nc" id="L73">        return totalMemory;</span>
+    }
+    
+    public void setTotalMemory(List&lt;List&lt;Object&gt;&gt; physicalMemoryData) {
+<span class="nc" id="L77">        this.totalMemory.setData(physicalMemoryData);</span>
+<span class="nc" id="L78">    }</span>
+    
+    public MetricsLineCharts getLoadAverage() {
+<span class="nc" id="L81">        return loadAverage;</span>
+    }
+    
+    public void setLoadAverage(List&lt;List&lt;Object&gt;&gt; loadAverageData) {
+<span class="nc" id="L85">        this.loadAverage.setData(loadAverageData);</span>
+<span class="nc" id="L86">    }</span>
+    
+    public MetricsLineCharts getThroughput() {
+<span class="nc" id="L89">        return throughput;</span>
+    }
+    
+    public void setThroughput(List&lt;List&lt;Object&gt;&gt; throughputData) {
+<span class="nc" id="L93">        this.throughput.setData(throughputData);</span>
+<span class="nc" id="L94">    }</span>
+    
+    public MetricsLineCharts getCommittedMemory() {
+<span class="nc" id="L97">        return committedMemory;</span>
+    }
+    
+    public void setCommittedMemory(List&lt;List&lt;Object&gt;&gt; committedMemory) {
+<span class="nc" id="L101">        this.committedMemory.setData(committedMemory);</span>
+<span class="nc" id="L102">    }</span>
+    
+    public MetricsLineCharts getInitMemory() {
+<span class="nc" id="L105">        return initMemory;</span>
+    }
+    
+    public void setInitMemory(List&lt;List&lt;Object&gt;&gt; initMemory) {
+<span class="nc" id="L109">        this.initMemory.setData(initMemory);</span>
+<span class="nc" id="L110">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

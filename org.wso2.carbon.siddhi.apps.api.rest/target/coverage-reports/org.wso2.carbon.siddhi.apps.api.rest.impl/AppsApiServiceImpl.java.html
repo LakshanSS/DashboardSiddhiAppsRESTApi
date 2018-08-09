@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AppsApiServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.impl</a> &gt; <span class="el_source">AppsApiServiceImpl.java</span></div><h1>AppsApiServiceImpl.java</h1><pre class="source lang-java linenums">/*
+ *   Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *   WSO2 Inc. licenses this file to you under the Apache License,
+ *   Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *   in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing,
+ *   software distributed under the License is distributed on an
+ *   &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *   KIND, either express or implied.  See the License for the
+ *   specific language governing permissions and limitations
+ *   under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.impl;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import feign.RetryableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.NotFoundException;
+import org.wso2.carbon.siddhi.apps.api.rest.ApiResponseMessage;
+import org.wso2.carbon.siddhi.apps.api.rest.SiddhiAppsDataHolder;
+import org.wso2.carbon.siddhi.apps.api.rest.AppsApiService;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.NodeConfigurationDetails;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.ResourceClusterInfo;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.SiddhiAppStatus;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.SiddhiAppSummaryInfo;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.StatusDashboardDBHandler;
+import org.wso2.carbon.siddhi.apps.api.rest.impl.utils.Constants;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.WorkerServiceFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.model.ModelApiResponse;
+import org.wso2.carbon.siddhi.apps.api.rest.model.Query;
+import org.wso2.carbon.siddhi.apps.api.rest.model.Record;
+import org.wso2.carbon.siddhi.apps.api.rest.model.ServerHADetails;
+import org.wso2.carbon.stream.processor.core.SiddhiAppRuntimeService;
+import org.wso2.msf4j.Request;
+import org.wso2.siddhi.core.SiddhiAppRuntime;
+import org.wso2.siddhi.core.event.Event;
+
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+import java.io.Reader;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import static org.wso2.carbon.siddhi.apps.api.rest.impl.utils.Constants.PROTOCOL;
+
+@javax.annotation.Generated(value = &quot;io.swagger.codegen.languages.JavaMSF4JServerCodegen&quot;,
+        date = &quot;2017-11-01T11:26:25.925Z&quot;)
+<span class="nc" id="L61">public class AppsApiServiceImpl extends AppsApiService {</span>
+
+    private static StatusDashboardDBHandler dashboardStore;
+<span class="nc" id="L64">    private Gson gson = new Gson();</span>
+    private DeploymentConfigs dashboardConfigurations;
+
+
+
+
+<span class="nc" id="L70">    private static final Logger log = LoggerFactory.getLogger(AppsApiServiceImpl.class);</span>
+    @Override
+    public Response query(Query body) throws NotFoundException {
+<span class="nc bnc" id="L73" title="All 4 branches missed.">        if (body.getQuery() == null || body.getQuery().isEmpty()) {</span>
+<span class="nc" id="L74">            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiResponseMessage(ApiResponseMessage</span>
+<span class="nc" id="L75">                    .ERROR, &quot;Query cannot be empty or null&quot;)).build();</span>
+        }
+<span class="nc bnc" id="L77" title="All 4 branches missed.">        if (body.getAppName() == null || body.getAppName().isEmpty()) {</span>
+<span class="nc" id="L78">            return Response.status(Response.Status.BAD_REQUEST).entity(new ApiResponseMessage(ApiResponseMessage</span>
+<span class="nc" id="L79">                    .ERROR, &quot;Siddhi app name cannot be empty or null&quot;)).build();</span>
+        }
+
+        SiddhiAppRuntimeService siddhiAppRuntimeService =
+<span class="nc" id="L83">                SiddhiAppsDataHolder.getInstance().getSiddhiAppRuntimeService();</span>
+<span class="nc" id="L84">        Map&lt;String, SiddhiAppRuntime&gt; siddhiAppRuntimes = siddhiAppRuntimeService.getActiveSiddhiAppRuntimes();</span>
+<span class="nc" id="L85">        SiddhiAppRuntime siddhiAppRuntime = siddhiAppRuntimes.get(body.getAppName());</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (siddhiAppRuntime == null) {</span>
+<span class="nc" id="L87">            return Response.status(Response.Status.NOT_FOUND).entity(new ApiResponseMessage(ApiResponseMessage</span>
+<span class="nc" id="L88">                    .ERROR, &quot;Cannot find an active SiddhiApp with name: &quot; + body.getAppName())).build();</span>
+        } else {
+            try {
+<span class="nc" id="L91">                Event[] events = siddhiAppRuntime.query(body.getQuery());</span>
+<span class="nc" id="L92">                List&lt;Record&gt; records = getRecords(events);</span>
+<span class="nc" id="L93">                ModelApiResponse response = new ModelApiResponse();</span>
+<span class="nc" id="L94">                response.setRecords(records);</span>
+<span class="nc" id="L95">                return Response.ok().entity(response).build();</span>
+<span class="nc" id="L96">            } catch (Exception e) {</span>
+<span class="nc" id="L97">                log.error(&quot;Error while querying for siddhiApp: &quot; + removeCRLFCharacters(body.getAppName()) +</span>
+<span class="nc" id="L98">                        &quot;, with query: &quot; + removeCRLFCharacters(body.getQuery()) + &quot; Error: &quot; +</span>
+<span class="nc" id="L99">                        removeCRLFCharacters(e.getMessage()), e);</span>
+<span class="nc" id="L100">                return Response.status(Response.Status.INTERNAL_SERVER_ERROR)</span>
+<span class="nc" id="L101">                        .entity(new ApiResponseMessage(ApiResponseMessage.ERROR,</span>
+<span class="nc" id="L102">                                                       &quot;Cannot query: &quot; + e.getMessage())).build();</span>
+            }
+        }
+    }
+
+    @Override
+    public Response getSiddhiApps(Request request) throws NotFoundException {
+<span class="nc" id="L109">        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, &quot;lakshan!&quot;)).build();</span>
+    }
+
+    @Override
+    public Response getSingleDeploymentSiddhiApps() throws NotFoundException, SQLException {
+
+<span class="nc" id="L115">            List&lt;NodeConfigurationDetails&gt; registeredWorkers = dashboardStore.selectAllWorkers();</span>
+<span class="nc" id="L116">            List&lt;NodeConfigurationDetails&gt; registeredManagers = dashboardStore.getAllManagerConfigDetails();</span>
+<span class="nc" id="L117">            List&lt;SiddhiAppSummaryInfo&gt; siddhiAppSummaryInfos = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L119">            List&lt;String&gt; ResourceClusteredWorkerNode = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (!registeredManagers.isEmpty()) {</span>
+<span class="nc" id="L121">                registeredManagers.parallelStream().forEach(manager -&gt; {</span>
+                    try {
+<span class="nc" id="L123">                        feign.Response resourceResponse = WorkerServiceFactory.getWorkerHttpsClient(</span>
+<span class="nc" id="L124">                                PROTOCOL + generateURLHostPort(manager.getHost(), String.valueOf(manager</span>
+<span class="nc" id="L125">                                        .getPort())), this.getUsername(), this.getPassword()).getClusterNodeDetails();</span>
+<span class="nc bnc" id="L126" title="All 4 branches missed.">                        if (resourceResponse != null &amp;&amp; resourceResponse.status() == 200) {</span>
+<span class="nc" id="L127">                            Reader inputStream = resourceResponse.body().asReader();</span>
+<span class="nc" id="L128">                            List&lt;ResourceClusterInfo&gt; clusterInfos = gson.fromJson(</span>
+<span class="nc" id="L129">                                    inputStream, new TypeToken&lt;List&lt;ResourceClusterInfo&gt;&gt;() {</span>
+<span class="nc" id="L130">                                    }.getType());</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">                            for (ResourceClusterInfo clusterInfo : clusterInfos) {</span>
+<span class="nc" id="L132">                                String workerId = generateWorkerKey(clusterInfo.getHttps_host(), clusterInfo</span>
+<span class="nc" id="L133">                                        .getHttps_port());</span>
+<span class="nc" id="L134">                                ResourceClusteredWorkerNode.add(workerId);</span>
+<span class="nc" id="L135">                            }</span>
+                        }
+<span class="nc" id="L137">                    } catch (RetryableException e) {</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">                        if (log.isDebugEnabled()) {</span>
+<span class="nc" id="L139">                            log.debug(removeCRLFCharacters(manager.getWorkerId()) + &quot; Unnable to reach manager.&quot;, e);</span>
+                        }
+<span class="nc" id="L141">                        log.warn(removeCRLFCharacters(manager.getWorkerId()) + &quot; Unnable to reach manager.&quot;);</span>
+
+<span class="nc" id="L143">                    } catch (IOException e) {</span>
+<span class="nc" id="L144">                        log.warn(&quot;Error occured while getting the response &quot; + e.getMessage());</span>
+<span class="nc" id="L145">                    }</span>
+<span class="nc" id="L146">                });</span>
+            }
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            if (!registeredWorkers.isEmpty()) {</span>
+<span class="nc" id="L149">                registeredWorkers.parallelStream().forEach(worker -&gt; {</span>
+<span class="nc" id="L150">                    ServerHADetails serverHADetails = new ServerHADetails();</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">                    if (!ResourceClusteredWorkerNode.contains(worker.getWorkerId())) {</span>
+                        try {
+<span class="nc" id="L153">                            feign.Response workerResponse = WorkerServiceFactory.getWorkerHttpsClient(PROTOCOL +</span>
+<span class="nc" id="L154">                                    generateURLHostPort(worker.getHost(), String.valueOf(</span>
+<span class="nc" id="L155">                                            worker.getPort())), getUsername(), getPassword()).getWorker();</span>
+<span class="nc" id="L156">                            String responseBody = workerResponse.body().toString();</span>
+<span class="nc" id="L157">                            serverHADetails = gson.fromJson(responseBody, ServerHADetails.class);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                            if (serverHADetails.getClusterId().equals(Constants.NON_CLUSTERS_ID)) {</span>
+<span class="nc" id="L159">                                feign.Response registeredWorkerSiddhiAppsResponse = WorkerServiceFactory</span>
+                                        .getWorkerHttpsClient
+
+<span class="nc" id="L162">                                                (PROTOCOL + generateURLHostPort(worker.getHost(), String.valueOf(</span>
+<span class="nc" id="L163">                                                        worker.getPort())), this.getUsername(), this.getPassword())</span>
+<span class="nc" id="L164">                                        .getAllAppDetails();</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">                                if (registeredWorkerSiddhiAppsResponse.status() == 200) {</span>
+<span class="nc" id="L166">                                    Reader inputReader = registeredWorkerSiddhiAppsResponse.body().asReader();</span>
+<span class="nc" id="L167">                                    List&lt;SiddhiAppStatus&gt; totalApps = gson.fromJson(inputReader, new</span>
+<span class="nc" id="L168">                                            TypeToken&lt;List&lt;SiddhiAppStatus&gt;&gt;() {</span>
+<span class="nc" id="L169">                                            }.getType());</span>
+
+<span class="nc bnc" id="L171" title="All 2 branches missed.">                                    for (SiddhiAppStatus siddhiapp : totalApps) {</span>
+<span class="nc" id="L172">                                        SiddhiAppSummaryInfo siddhiAppSummaryInfo = new SiddhiAppSummaryInfo();</span>
+<span class="nc" id="L173">                                        siddhiAppSummaryInfo.setAppName(siddhiapp.getAppName());</span>
+<span class="nc" id="L174">                                        siddhiAppSummaryInfo.setStatus(siddhiapp.getStatus());</span>
+<span class="nc" id="L175">                                        siddhiAppSummaryInfo.setLastUpdate(siddhiapp.getTimeAgo());</span>
+<span class="nc" id="L176">                                        siddhiAppSummaryInfo.setStatEnabled(siddhiapp.isStatEnabled());</span>
+<span class="nc" id="L177">                                        siddhiAppSummaryInfo.setDeployedNodeType(&quot;Worker&quot;);</span>
+<span class="nc" id="L178">                                        siddhiAppSummaryInfo.setDeployedNodeHost(worker.getHost());</span>
+<span class="nc" id="L179">                                        siddhiAppSummaryInfo.setDeployedNodePort(String.valueOf(worker.getPort()));</span>
+<span class="nc" id="L180">                                        siddhiAppSummaryInfos.add(siddhiAppSummaryInfo);</span>
+<span class="nc" id="L181">                                    }</span>
+                                }
+                            }
+<span class="nc" id="L184">                        } catch (RetryableException ex) {</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">                            if (log.isDebugEnabled()) {</span>
+<span class="nc" id="L186">                                log.debug(removeCRLFCharacters(worker.getWorkerId()) + &quot; Unnable to reach manager&quot; +</span>
+                                        &quot;.&quot;, ex);
+                            }
+<span class="nc" id="L189">                            log.warn(removeCRLFCharacters(worker.getWorkerId()) + &quot; Unnable to reach manager.&quot;);</span>
+<span class="nc" id="L190">                        } catch (IOException e) {</span>
+<span class="nc" id="L191">                            log.error(&quot;error occurred while retrieving response &quot;);</span>
+<span class="nc" id="L192">                        }</span>
+                    }
+<span class="nc" id="L194">                });</span>
+            }
+<span class="nc" id="L196">            return Response.ok().entity(siddhiAppSummaryInfos).build();</span>
+
+    }
+
+    private List&lt;Record&gt; getRecords(Event[] events) {
+<span class="nc" id="L201">        List&lt;Record&gt; records = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (events != null) {</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">            for (Event event : events) {</span>
+<span class="nc" id="L204">                Record record = new Record();</span>
+<span class="nc" id="L205">                record.addAll(Arrays.asList(event.getData()));</span>
+<span class="nc" id="L206">                records.add(record);</span>
+            }
+        }
+<span class="nc" id="L209">        return records;</span>
+    }
+
+    private static String removeCRLFCharacters(String str) {
+<span class="nc bnc" id="L213" title="All 2 branches missed.">        if (str != null) {</span>
+<span class="nc" id="L214">            str = str.replace('\n', '_').replace('\r', '_');</span>
+        }
+<span class="nc" id="L216">        return str;</span>
+    }
+    private String generateURLHostPort(String host, String port) {
+
+<span class="nc" id="L220">        return host + Constants.URL_HOST_PORT_SEPERATOR + port;</span>
+    }
+
+    /**
+     * Get worker asscess username.
+     *
+     * @return
+     */
+
+    private String getUsername() {
+
+<span class="nc" id="L231">        return dashboardConfigurations.getUsername();</span>
+    }
+
+    /**
+     * GetGet worker asscess password.
+     *
+     * @return
+     */
+    private String getPassword() {
+
+<span class="nc" id="L241">        return dashboardConfigurations.getPassword();</span>
+    }
+
+    private String generateWorkerKey(String host, String port) {
+
+<span class="nc" id="L246">        return host + Constants.WORKER_KEY_GENERATOR + port;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

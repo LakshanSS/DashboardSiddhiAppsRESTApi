@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<BugCollection version='3.0.1' threshold='medium' effort='max'><Error></Error><Project><SrcDir>/home/lakshan/Desktop/lll/org.wso2.carbon.siddhi.apps.api.rest/src/main/java</SrcDir><SrcDir>/home/lakshan/Desktop/lll/org.wso2.carbon.siddhi.apps.api.rest/src/gen/java</SrcDir><SrcDir>/home/lakshan/Desktop/lll/org.wso2.carbon.siddhi.apps.api.rest/target/generated-sources/annotations</SrcDir><SrcDir>/home/lakshan/Desktop/lll/org.wso2.carbon.siddhi.apps.api.rest/src/test/java</SrcDir></Project></BugCollection>

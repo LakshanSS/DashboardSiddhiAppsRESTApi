@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatasourceServiceComponent.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal.services</a> &gt; <span class="el_source">DatasourceServiceComponent.java</span></div><h1>DatasourceServiceComponent.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal.services;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.analytics.idp.client.core.api.AnalyticsHttpClientBuilderService;
+import org.wso2.carbon.config.provider.ConfigProvider;
+import org.wso2.carbon.datasource.core.api.DataSourceService;
+import org.wso2.carbon.datasource.core.exception.DataSourceException;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
+
+/**
+ * This is OSGi-components to register datasource provider class.
+ */
+@Component(
+        name = &quot;org.wso2.carbon.status.dashboard.core.internal.services.DatasourceServiceComponent&quot;,
+        service = DatasourceServiceComponent.class,
+        immediate = true
+)
+<span class="nc" id="L41">public class DatasourceServiceComponent {</span>
+<span class="nc" id="L42">    private static final Logger logger = LoggerFactory.getLogger(DatasourceServiceComponent.class);</span>
+    private static final String DASHBOARD_DATASOURCE_DEFAULT = &quot;WSO2_STATUS_DASHBOARD_DB&quot;;
+    private static final String METRICS_DATASOURCE_DEFAULT = &quot;WSO2_METRICS_DB&quot;;
+
+    @Activate
+    protected void start(BundleContext bundleContext) {
+<span class="nc" id="L48">        logger.debug(&quot;Status dashboard datasource service component is activated.&quot;);</span>
+<span class="nc" id="L49">    }</span>
+
+    @Deactivate
+    protected void stop() {
+<span class="nc" id="L53">        logger.debug(&quot;Status dashboard datasource service component is deactivated.&quot;);</span>
+<span class="nc" id="L54">    }</span>
+
+
+    @Reference(
+            name = &quot;org.wso2.carbon.datasource.DataSourceService&quot;,
+            service = DataSourceService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterDataSourceService&quot;
+    )
+    protected void onDataSourceServiceReady(DataSourceService service) throws DataSourceException {
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L66">            logger.debug(&quot;@Reference(bind) DataSourceService&quot;);</span>
+        }
+<span class="nc" id="L68">        String dashboardDatasourceName = MonitoringDataHolder.getInstance().getStatusDashboardDeploymentConfigs()</span>
+<span class="nc" id="L69">                .getDashboardDatasourceName();</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        dashboardDatasourceName =</span>
+                dashboardDatasourceName != null ? dashboardDatasourceName : DASHBOARD_DATASOURCE_DEFAULT;
+<span class="nc" id="L72">        String metricsDatasourceName = MonitoringDataHolder.getInstance().getStatusDashboardDeploymentConfigs()</span>
+<span class="nc" id="L73">                .getMetricsDatasourceName();</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        metricsDatasourceName = metricsDatasourceName != null ? metricsDatasourceName : METRICS_DATASOURCE_DEFAULT;</span>
+<span class="nc" id="L75">        MonitoringDataHolder.getInstance().setDashboardDataSource((HikariDataSource) service.getDataSource</span>
+<span class="nc" id="L76">                (dashboardDatasourceName));</span>
+<span class="nc" id="L77">        MonitoringDataHolder.getInstance().setMetricsDataSource((HikariDataSource) service.getDataSource</span>
+<span class="nc" id="L78">                (metricsDatasourceName));</span>
+<span class="nc" id="L79">    }</span>
+
+    protected void unregisterDataSourceService(DataSourceService service) {
+<span class="nc bnc" id="L82" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L83">            logger.debug(&quot;@Reference(unbind) DataSourceService&quot;);</span>
+        }
+<span class="nc" id="L85">        MonitoringDataHolder.getInstance().setDashboardDataSource(null);</span>
+<span class="nc" id="L86">        MonitoringDataHolder.getInstance().setMetricsDataSource(null);</span>
+<span class="nc" id="L87">    }</span>
+
+    /**
+     * Get the ConfigProvider service.
+     * This is the bind method that gets called for ConfigProvider service registration that satisfy the policy.
+     *
+     * @param configProvider the ConfigProvider service that is registered as a service.
+     */
+    @Reference(
+            name = &quot;carbon.config.provider&quot;,
+            service = ConfigProvider.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterConfigProvider&quot;
+    )
+    protected void registerConfigProvider(ConfigProvider configProvider) {
+<span class="nc" id="L103">        MonitoringDataHolder.getInstance().setConfigProvider(configProvider);</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L105">            logger.debug(&quot;@Reference(bind) ConfigProvider at &quot; + ConfigProvider.class.getName());</span>
+        }
+<span class="nc" id="L107">    }</span>
+
+    /**
+     * This is the unbind method for the above reference that gets called for ConfigProvider instance un-registrations.
+     *
+     * @param configProvider the ConfigProvider service that get unregistered.
+     */
+    protected void unregisterConfigProvider(ConfigProvider configProvider) {
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L116">            logger.debug(&quot;@Reference(unbind) ConfigProvider at &quot; + ConfigProvider.class.getName());</span>
+        }
+<span class="nc" id="L118">        MonitoringDataHolder.getInstance().setConfigProvider(null);</span>
+<span class="nc" id="L119">    }</span>
+
+    @Reference(
+            name = &quot;carbon.anaytics.common.clientservice&quot;,
+            service = AnalyticsHttpClientBuilderService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterAnalyticsHttpClient&quot;
+    )
+    protected void registerAnalyticsHttpClient(AnalyticsHttpClientBuilderService service) {
+<span class="nc" id="L129">        MonitoringDataHolder.getInstance().setClientBuilderService(service);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L131">            logger.debug(&quot;@Reference(bind) AnalyticsHttpClientBuilderService at &quot; +</span>
+<span class="nc" id="L132">                    AnalyticsHttpClientBuilderService.class.getName());</span>
+        }
+<span class="nc" id="L134">    }</span>
+
+    protected void unregisterAnalyticsHttpClient(AnalyticsHttpClientBuilderService service) {
+<span class="nc bnc" id="L137" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L138">            logger.debug(&quot;@Reference(unbind) AnalyticsHttpClientBuilderService at &quot; +</span>
+<span class="nc" id="L139">                    AnalyticsHttpClientBuilderService.class.getName());</span>
+        }
+<span class="nc" id="L141">        MonitoringDataHolder.getInstance().setClientBuilderService(null);</span>
+<span class="nc" id="L142">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

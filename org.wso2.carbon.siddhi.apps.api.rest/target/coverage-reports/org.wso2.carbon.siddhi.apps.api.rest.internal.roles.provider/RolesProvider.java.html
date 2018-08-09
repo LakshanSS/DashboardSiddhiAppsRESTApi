@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RolesProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal.roles.provider</a> &gt; <span class="el_source">RolesProvider.java</span></div><h1>RolesProvider.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the &quot;License&quot;); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal.roles.provider;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.analytics.idp.client.core.api.IdPClient;
+import org.wso2.carbon.analytics.idp.client.core.exception.IdPClientException;
+import org.wso2.carbon.analytics.permissions.bean.Role;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * This is the bean class for default sysAdminRoles in deployment yaml.
+ */
+public class RolesProvider {
+<span class="nc" id="L35">    private static final Logger log = LoggerFactory.getLogger(RolesProvider.class);</span>
+<span class="nc" id="L36">    private List&lt;Role&gt; sysAdminRolesList = null;</span>
+<span class="nc" id="L37">    private List&lt;Role&gt; developerRolesList = null;</span>
+<span class="nc" id="L38">    private List&lt;Role&gt; viewerRolesList = null;</span>
+    private DeploymentConfigs dashboardConfigurations;
+
+<span class="nc" id="L41">    public RolesProvider(DeploymentConfigs dashboardConfigurations) {</span>
+<span class="nc" id="L42">        this.dashboardConfigurations = dashboardConfigurations;</span>
+<span class="nc" id="L43">    }</span>
+
+    /**
+     * @param client
+     * @return
+     */
+    public List&lt;Role&gt; getSysAdminRolesList(IdPClient client) {
+<span class="nc bnc" id="L50" title="All 2 branches missed.">        if (sysAdminRolesList == null) {</span>
+<span class="nc" id="L51">            sysAdminRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">            if (dashboardConfigurations.getSysAdminRoles() != null) {</span>
+<span class="nc" id="L53">                readSysAdminConfigs(client);</span>
+            }
+        }
+<span class="nc" id="L56">        return sysAdminRolesList;</span>
+    }
+
+    /**
+     * @param client
+     * @return
+     */
+    public List&lt;Role&gt; getDeveloperRolesList(IdPClient client) {
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if (developerRolesList == null) {</span>
+<span class="nc" id="L65">            developerRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (!dashboardConfigurations.getDeveloperRoles().isEmpty()) {</span>
+<span class="nc" id="L67">                nonAdminConfigs(client);</span>
+            }
+        }
+<span class="nc" id="L70">        return developerRolesList;</span>
+    }
+
+    /**
+     * @param client
+     * @return
+     */
+    public List&lt;Role&gt; getViewerRolesList(IdPClient client) {
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (viewerRolesList == null) {</span>
+<span class="nc" id="L79">            viewerRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">            if (!dashboardConfigurations.getViewerRoles().isEmpty()) {</span>
+<span class="nc" id="L81">                nonAdminConfigs(client);</span>
+            }
+        }
+<span class="nc" id="L84">        return viewerRolesList;</span>
+    }
+
+    /**
+     * @param client
+     */
+    private void readSysAdminConfigs(IdPClient client) {
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (!dashboardConfigurations.getSysAdminRoles().isEmpty()) {</span>
+<span class="nc" id="L92">            sysAdminRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L93">            sysAdminRolesList = populateRoles(dashboardConfigurations.getSysAdminRoles(), client);</span>
+        } else {
+            //by default give permission to admin
+            try {
+<span class="nc" id="L97">                org.wso2.carbon.analytics.idp.client.core.models.Role role = client.getAdminRole();</span>
+<span class="nc" id="L98">                sysAdminRolesList.add(new Role(role.getId(), role.getDisplayName()));</span>
+<span class="nc" id="L99">            } catch (IdPClientException e) {</span>
+<span class="nc" id="L100">                log.error(&quot;Error retrieving roles from idp client  admin roles.&quot;, e);</span>
+<span class="nc" id="L101">            }</span>
+        }
+<span class="nc" id="L103">    }</span>
+
+    /**
+     * @param client
+     */
+    private void nonAdminConfigs(IdPClient client) {
+<span class="nc bnc" id="L109" title="All 2 branches missed.">        if (!dashboardConfigurations.getDeveloperRoles().isEmpty()) {</span>
+<span class="nc" id="L110">            developerRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L111">            developerRolesList = populateRoles(dashboardConfigurations.getDeveloperRoles(), client);</span>
+        }
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (!dashboardConfigurations.getViewerRoles().isEmpty()) {</span>
+<span class="nc" id="L114">            viewerRolesList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L115">            viewerRolesList = populateRoles(dashboardConfigurations.getViewerRoles(), client);</span>
+        }
+<span class="nc" id="L117">    }</span>
+
+    private List&lt;Role&gt; populateRoles(List&lt;String&gt; displayNamesList, IdPClient client) {
+<span class="nc" id="L120">        List&lt;Role&gt; roleList = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc" id="L122">            List&lt;org.wso2.carbon.analytics.idp.client.core.models.Role&gt; roles = client.getAllRoles();</span>
+<span class="nc" id="L123">            roles.forEach(idpRole -&gt; {</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                        if (displayNamesList.contains(idpRole.getDisplayName())) {</span>
+<span class="nc" id="L125">                            Role role = new Role(idpRole.getId(), idpRole.getDisplayName());</span>
+<span class="nc" id="L126">                            roleList.add(role);</span>
+                        }
+<span class="nc" id="L128">                    }</span>
+            );
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            if (displayNamesList.size() &gt; roles.size()) {</span>
+<span class="nc" id="L131">                log.error(&quot;Please define role under 'auth.config' first.&quot;);</span>
+            }
+<span class="nc" id="L133">        } catch (IdPClientException e) {</span>
+<span class="nc" id="L134">            log.error(&quot;Error retrieving roles from idp client.&quot;, e);</span>
+<span class="nc" id="L135">        }</span>
+<span class="nc" id="L136">        return roleList;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

@@ -1,0 +1,622 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StatusDashboardDBHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.dbhandler</a> &gt; <span class="el_source">StatusDashboardDBHandler.java</span></div><h1>StatusDashboardDBHandler.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.dbhandler;
+
+import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.config.ConfigurationException;
+import org.wso2.carbon.database.query.manager.exception.QueryMappingNotAvailableException;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.NodeConfigurationDetails;
+import org.wso2.carbon.siddhi.apps.api.rest.bean.WorkerGeneralDetails;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.DBTableUtils;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.RDBMSTableException;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.StatusDashboardRuntimeException;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.StatusDashboardValidationException;
+import org.wso2.carbon.siddhi.apps.api.rest.impl.utils.Constants;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants.*;
+
+/**
+ * This class represents key database operations related to node data.
+ */
+
+public class StatusDashboardDBHandler {
+<span class="nc" id="L49">    private static final Logger logger = LoggerFactory.getLogger(StatusDashboardDBHandler.class);</span>
+<span class="nc" id="L50">    private static final String DATASOURCE_ID = MonitoringDataHolder.getInstance().getStatusDashboardDeploymentConfigs()</span>
+<span class="nc" id="L51">            .getDashboardDatasourceName();</span>
+    private String createTableQuery;
+    private String tableCheckQuery;
+    private String selectQuery;
+    private String deleteQuery;
+    private String insertQuery;
+    private HikariDataSource dataSource;
+    private Map&lt;String, Map&lt;String, String&gt;&gt; workerAttributeTypeMap;
+    private static final String WORKERID_PLACEHOLDER = &quot;{{WORKER_ID}}&quot;;
+    private static final String MANAGERID_PLACEHOLDER = &quot;{{MANAGER_ID}}&quot;;
+    private static final String MANAGERID_EXPRESSION = &quot;MANAGERID={{MANAGER_ID}}&quot;;
+    private static final String WORKERID_EXPRESSION = &quot;WORKERID={{WORKER_ID}}&quot;;
+    private static final String WORKER_DETAILS_TABLE = &quot;WORKERS_DETAILS&quot;;
+    private static final String WORKER_CONFIG_TABLE = &quot;WORKERS_CONFIGURATION&quot;;
+    private static final String MANAGER_CONFIG_TABLE = &quot;MANAGER_CONFIGURATION&quot;;
+<span class="nc" id="L66">    private static boolean isConfigTableCreated = false;</span>
+<span class="nc" id="L67">    private static boolean isManagerConfigTableCreated = false;</span>
+<span class="nc" id="L68">    private static boolean isGeneralTableCreated = false;</span>
+    private QueryManager statusDashboardQueryManager;
+
+<span class="nc" id="L71">    public StatusDashboardDBHandler() {</span>
+<span class="nc" id="L72">        dataSource = MonitoringDataHolder.getInstance().getDashboardDataSource();</span>
+<span class="nc" id="L73">        Connection conn = null;</span>
+<span class="nc bnc" id="L74" title="All 2 branches missed.">        if (dataSource != null) {</span>
+<span class="nc" id="L75">            conn = DBHandler.getInstance().getConnection(dataSource);</span>
+            try {
+<span class="nc" id="L77">                conn = MonitoringDataHolder.getInstance().getDashboardDataSource().getConnection();</span>
+<span class="nc" id="L78">                DatabaseMetaData databaseMetaData = conn.getMetaData();</span>
+<span class="nc" id="L79">                statusDashboardQueryManager = new QueryManager(databaseMetaData.getDatabaseProductName(),</span>
+<span class="nc" id="L80">                        databaseMetaData.getDatabaseProductVersion());</span>
+<span class="nc" id="L81">                workerAttributeTypeMap = DBTableUtils.getInstance().</span>
+<span class="nc" id="L82">                        loadWorkerAttributeTypeMap(statusDashboardQueryManager);</span>
+<span class="nc" id="L83">                selectQuery = statusDashboardQueryManager.getQuery(SQLConstants.SELECT_QUERY);</span>
+<span class="nc" id="L84">                deleteQuery = statusDashboardQueryManager.getQuery(SQLConstants.DELETE_QUERY);</span>
+<span class="nc" id="L85">                insertQuery = statusDashboardQueryManager.getQuery(SQLConstants.INSERT_QUERY);</span>
+<span class="nc" id="L86">                tableCheckQuery = statusDashboardQueryManager.getQuery(SQLConstants.ISTABLE_EXISTS_QUERY);</span>
+<span class="nc" id="L87">                createTableQuery = statusDashboardQueryManager.getQuery(SQLConstants.CREATE_TABLE);</span>
+<span class="nc" id="L88">            } catch (SQLException | ConfigurationException | QueryMappingNotAvailableException e) {</span>
+<span class="nc" id="L89">                throw new StatusDashboardRuntimeException(&quot;Error initializing connection. &quot;, e);</span>
+            } finally {
+<span class="nc" id="L91">                cleanupConnection(conn);</span>
+<span class="nc" id="L92">            }</span>
+<span class="nc" id="L93">            createWorkerConfigurationDB();</span>
+<span class="nc" id="L94">            createManagerConfigurationDB();</span>
+<span class="nc" id="L95">            creteDetailsDB();</span>
+        } else {
+<span class="nc" id="L97">            throw new RDBMSTableException(DATASOURCE_ID + &quot; Could not find. Hence cannot initialize the status &quot; +</span>
+                    &quot;dashboard. Please check database is available&quot;);
+        }
+<span class="nc" id="L100">    }</span>
+
+    private void createWorkerConfigurationDB() {
+<span class="nc" id="L103">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L104">        PreparedStatement stmt = null;</span>
+<span class="nc" id="L105">        String resolved = tableCheckQuery.replace(PLACEHOLDER_TABLE_NAME, WORKER_CONFIG_TABLE);</span>
+<span class="nc" id="L106">        String resolvedTableCreateQuery = createTableQuery.replace(PLACEHOLDER_TABLE_NAME, WORKER_CONFIG_TABLE);</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (!DBHandler.getInstance().isTableExist(conn, resolved)) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            if (!isConfigTableCreated) {</span>
+<span class="nc" id="L109">                Map&lt;String, String&gt; attributesList = DBTableUtils.getInstance().loadWorkerConfigTableTuples</span>
+<span class="nc" id="L110">                        (statusDashboardQueryManager);</span>
+<span class="nc" id="L111">                String resolvedTuples = String.format(</span>
+                        &quot;WORKERID &quot; + STRING_TEMPLATE + &quot; PRIMARY KEY&quot; + TUPLE_SEPARATOR +
+                                &quot;HOST &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+<span class="nc" id="L114">                                &quot;PORT &quot; + STRING_TEMPLATE, attributesList.get(&quot;WORKERID&quot;), attributesList.get(&quot;HOST&quot;),</span>
+<span class="nc" id="L115">                        attributesList.get(&quot;PORT&quot;));</span>
+<span class="nc" id="L116">                resolvedTableCreateQuery = resolvedTableCreateQuery.replace(PLACEHOLDER_COLUMNS_PRIMARYKEY,</span>
+                        resolvedTuples);
+                try {
+<span class="nc" id="L119">                    stmt = conn.prepareStatement(resolvedTableCreateQuery);</span>
+<span class="nc" id="L120">                    stmt.execute();</span>
+<span class="nc" id="L121">                    isConfigTableCreated = true;</span>
+<span class="nc" id="L122">                } catch (SQLException e) {</span>
+<span class="nc" id="L123">                    logger.error(&quot;Error creating table please create manually .&quot; + WORKER_CONFIG_TABLE, e);</span>
+                } finally {
+<span class="nc" id="L125">                    closePreparedStatement(stmt);</span>
+<span class="nc" id="L126">                    cleanupConnection(conn);</span>
+<span class="nc" id="L127">                }</span>
+            }
+        }
+<span class="nc" id="L130">    }</span>
+
+    private void createManagerConfigurationDB() {
+<span class="nc" id="L133">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L134">        PreparedStatement stmt = null;</span>
+<span class="nc" id="L135">        String resolved = tableCheckQuery.replace(PLACEHOLDER_TABLE_NAME, MANAGER_CONFIG_TABLE);</span>
+<span class="nc" id="L136">        String resolvedTableCreateQuery = createTableQuery.replace(PLACEHOLDER_TABLE_NAME, MANAGER_CONFIG_TABLE);</span>
+<span class="nc bnc" id="L137" title="All 4 branches missed.">        if (!isManagerConfigTableCreated &amp;&amp; (!DBHandler.getInstance().isTableExist(conn, resolved))) {</span>
+<span class="nc" id="L138">            Map&lt;String, String&gt; attributesList = DBTableUtils.getInstance().loadManagerConfigTableTuples</span>
+<span class="nc" id="L139">                    (statusDashboardQueryManager);</span>
+<span class="nc" id="L140">            String resolvedTuples = String.format(</span>
+                    &quot;MANAGERID &quot; + STRING_TEMPLATE + &quot; PRIMARY KEY&quot; + TUPLE_SEPARATOR +
+                            &quot;HOST &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+<span class="nc" id="L143">                            &quot;PORT &quot; + STRING_TEMPLATE, attributesList.get(Constants.MANAGER_HOST_PORT), attributesList</span>
+<span class="nc" id="L144">                            .get(Constants.NODE_HOST_NAME), attributesList.get(Constants.NODE_PORT_VALUE));</span>
+<span class="nc" id="L145">            resolvedTableCreateQuery = resolvedTableCreateQuery.replace(PLACEHOLDER_COLUMNS_PRIMARYKEY,</span>
+                    resolvedTuples);
+            try {
+<span class="nc" id="L148">                stmt = conn.prepareStatement(resolvedTableCreateQuery);</span>
+<span class="nc" id="L149">                stmt.execute();</span>
+<span class="nc" id="L150">                isManagerConfigTableCreated = true;</span>
+<span class="nc" id="L151">            } catch (SQLException e) {</span>
+<span class="nc" id="L152">                logger.error(&quot;Error occurred while creating table, please create manually .&quot; + MANAGER_CONFIG_TABLE, e);</span>
+            } finally {
+<span class="nc" id="L154">                closePreparedStatement(stmt);</span>
+<span class="nc" id="L155">                cleanupConnection(conn);</span>
+<span class="nc" id="L156">            }</span>
+        }
+<span class="nc" id="L158">    }</span>
+
+    private void creteDetailsDB() {
+<span class="nc" id="L161">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L162">        String resolved = tableCheckQuery.replace(PLACEHOLDER_TABLE_NAME, WORKER_DETAILS_TABLE);</span>
+<span class="nc" id="L163">        String resolvedCreatedTable = createTableQuery.replace(PLACEHOLDER_TABLE_NAME, WORKER_DETAILS_TABLE);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (!DBHandler.getInstance().isTableExist(conn, resolved)) {</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (!isGeneralTableCreated) {</span>
+<span class="nc" id="L166">                Map&lt;String, String&gt; attributesList = DBTableUtils.getInstance().loadWorkerGeneralTableTuples</span>
+<span class="nc" id="L167">                        (statusDashboardQueryManager);</span>
+<span class="nc" id="L168">                String resolvedTuples = String.format(</span>
+                        &quot; CARBONID &quot; + STRING_TEMPLATE + &quot; PRIMARY KEY &quot; + TUPLE_SEPARATOR +
+                                &quot; WORKERID &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; JAVARUNTIMENAME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; JAVAVMVERSION &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; JAVAVMVENDOR &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; JAVAHOME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; JAVAVERSION &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; OSNAME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; OSVERSION &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; USERHOME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; USERTIMEZONE &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; USERNAME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; USERCOUNTRY &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; REPOLOCATION &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR +
+                                &quot; SERVERSTARTTIME &quot; + STRING_TEMPLATE + TUPLE_SEPARATOR + &quot; &quot; + STRING_TEMPLATE
+<span class="nc" id="L184">                        , attributesList.get(&quot;CARBONID&quot;), attributesList.get(&quot;WORKERID&quot;),</span>
+<span class="nc" id="L185">                        attributesList.get(&quot;JAVARUNTIMENAME&quot;), attributesList.get(&quot;JAVAVMVERSION&quot;),</span>
+<span class="nc" id="L186">                        attributesList.get(&quot;JAVAVMVENDOR&quot;), attributesList.get(&quot;JAVAHOME&quot;),</span>
+<span class="nc" id="L187">                        attributesList.get(&quot;JAVAVERSION&quot;), attributesList.get(&quot;OSNAME&quot;),</span>
+<span class="nc" id="L188">                        attributesList.get(&quot;OSVERSION&quot;), attributesList.get(&quot;USERHOME&quot;),</span>
+<span class="nc" id="L189">                        attributesList.get(&quot;USERTIMEZONE&quot;), attributesList.get(&quot;USERNAME&quot;),</span>
+<span class="nc" id="L190">                        attributesList.get(&quot;USERCOUNTRY&quot;), attributesList.get(&quot;REPOLOCATION&quot;),</span>
+<span class="nc" id="L191">                        attributesList.get(&quot;SERVERSTARTTIME&quot;),</span>
+<span class="nc" id="L192">                        statusDashboardQueryManager.getQuery(&quot;foreignKeyQuery&quot;));</span>
+<span class="nc" id="L193">                resolvedCreatedTable = resolvedCreatedTable.replace(PLACEHOLDER_COLUMNS_PRIMARYKEY, resolvedTuples);</span>
+<span class="nc" id="L194">                PreparedStatement stmt = null;</span>
+                try {
+<span class="nc" id="L196">                    stmt = conn.prepareStatement(resolvedCreatedTable);</span>
+<span class="nc" id="L197">                    stmt.execute();</span>
+<span class="nc" id="L198">                    isGeneralTableCreated = true;</span>
+<span class="nc" id="L199">                    stmt.close();</span>
+<span class="nc" id="L200">                } catch (SQLException e) {</span>
+<span class="nc" id="L201">                    throw new RDBMSTableException(&quot;Error creating table there may have already existing database .&quot; +</span>
+                            WORKER_DETAILS_TABLE, e);
+                } finally {
+<span class="nc" id="L204">                    closePreparedStatement(stmt);</span>
+<span class="nc" id="L205">                    cleanupConnection(conn);</span>
+<span class="nc" id="L206">                }</span>
+            }
+        }
+<span class="nc" id="L209">    }</span>
+
+    /**
+     * Resolve the table names in the queries.
+     *
+     * @param query db queries
+     * @return the tableName
+     */
+    private String resolveTableName(String query, String tableName) {
+<span class="nc" id="L218">        return query.replace(PLACEHOLDER_TABLE_NAME, tableName);</span>
+    }
+
+    /**
+     * Returns a connection instance.
+     *
+     * @return a new {@link Connection} instance from the datasource.
+     */
+    private Connection getConnection() {
+<span class="nc" id="L227">        return DBHandler.getInstance().getConnection(dataSource);</span>
+    }
+
+    /**
+     * Method which can be used to clear up and ephemeral SQL connectivity artifacts.
+     *
+     * @param conn {@link Connection} instance (can be null)
+     */
+    public static void cleanupConnection(Connection conn) {
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        if (conn != null) {</span>
+            try {
+<span class="nc" id="L238">                conn.close();</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">                if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L240">                    logger.debug(&quot;Closed Connection in Worker DB&quot;);</span>
+                }
+<span class="nc" id="L242">            } catch (SQLException e) {</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">                if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L244">                    logger.debug(&quot;Error closing Connection in worker DB.&quot;, e);</span>
+                }
+<span class="nc" id="L246">            }</span>
+        }
+<span class="nc" id="L248">    }</span>
+
+    /**
+     * Method which can be used to close the prepared statement.
+     */
+
+    private void closePreparedStatement(PreparedStatement statement) {
+        try {
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            if (statement != null) {</span>
+<span class="nc" id="L257">                statement.close();</span>
+            }
+<span class="nc" id="L259">        } catch (SQLException e) {</span>
+<span class="nc" id="L260">            logger.debug(&quot;Error occurred while closing the statement.&quot;, e);</span>
+<span class="nc" id="L261">        }</span>
+<span class="nc" id="L262">    }</span>
+
+    /**
+     * Method which is used to insert the worker configuration details to database.
+     *
+     * @param workerConfigurationDetails
+     * @return isSuccess
+     * @throws RDBMSTableException
+     */
+    public boolean insertWorkerConfiguration(NodeConfigurationDetails workerConfigurationDetails)
+            throws RDBMSTableException {
+<span class="nc" id="L273">        String columnNames = NodeConfigurationDetails.getColumnLabeles();</span>
+<span class="nc" id="L274">        Object[] records = workerConfigurationDetails.toArray();</span>
+        try {
+<span class="nc" id="L276">            return this.insert(columnNames, records, WORKER_CONFIG_TABLE);</span>
+<span class="nc" id="L277">        } catch (RDBMSTableException e) {</span>
+<span class="nc" id="L278">            throw new RDBMSTableException(&quot;Error inserting worker configuration details, &quot; + e.getMessage(), e);</span>
+        }
+
+    }
+
+    /**
+     * Method which is used to insert the worker configuration details to database.
+     *
+     * @param workerGeneralDetails workerConfiguration object
+     * @return isSuccess
+     */
+    public boolean insertWorkerGeneralDetails(WorkerGeneralDetails workerGeneralDetails) throws RDBMSTableException {
+<span class="nc" id="L290">        String columnNames = WorkerGeneralDetails.getColumnLabeles();</span>
+<span class="nc" id="L291">        Object[] records = workerGeneralDetails.toArray();</span>
+        try {
+<span class="nc" id="L293">            return this.insert(columnNames, records, WORKER_DETAILS_TABLE);</span>
+<span class="nc" id="L294">        } catch (RDBMSTableException e) {</span>
+<span class="nc" id="L295">            throw new RDBMSTableException(&quot;Error inserting worker general details.&quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    /**
+     * Method which is used to insert the manager configuration details to database.
+     *
+     * @param managerConfigurationDetails managerConfiguration object
+     * @return isSuccess
+     */
+    public boolean insertManagerConfiguration(NodeConfigurationDetails managerConfigurationDetails) throws
+            RDBMSTableException {
+<span class="nc" id="L307">        String columnNames = NodeConfigurationDetails.getManagerColumnLabeles();</span>
+<span class="nc" id="L308">        Object[] records = managerConfigurationDetails.toArray();</span>
+        try {
+<span class="nc" id="L310">            return this.insert(columnNames, records, MANAGER_CONFIG_TABLE);</span>
+<span class="nc" id="L311">        } catch (RDBMSTableException e) {</span>
+<span class="nc" id="L312">            throw new RDBMSTableException(&quot;Error while inserting the data. &quot; + e.getMessage(), e);</span>
+        }
+
+    }
+
+
+    /**
+     * Insert manager data manager db.
+     *
+     * @param columnNames column labels needed to get
+     * @param records     objects needed to insert.
+     * @return
+     */
+    private boolean insert(String columnNames, Object[] records, String tableName) throws RDBMSTableException {
+<span class="nc" id="L326">        String resolvedInsertQuery = resolveTableName(insertQuery, tableName);</span>
+<span class="nc" id="L327">        Map&lt;String, String&gt; attributesTypes = workerAttributeTypeMap.get(tableName);</span>
+<span class="nc" id="L328">        String query = DBTableUtils.getInstance().composeInsertQuery(resolvedInsertQuery.replace(PLACEHOLDER_COLUMNS,</span>
+<span class="nc" id="L329">                &quot;(&quot; + columnNames + &quot;)&quot;), attributesTypes.size());</span>
+<span class="nc" id="L330">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L331">        PreparedStatement stmt = null;</span>
+        try {
+<span class="nc" id="L333">            stmt = conn.prepareStatement(query);</span>
+<span class="nc" id="L334">            stmt = DBTableUtils.getInstance().populateInsertStatement(records, stmt, attributesTypes,</span>
+                    statusDashboardQueryManager);
+<span class="nc" id="L336">            DBHandler.getInstance().insert(stmt);</span>
+<span class="nc" id="L337">            return true;</span>
+<span class="nc" id="L338">        } catch (SQLException e) {</span>
+<span class="nc" id="L339">            throw new RDBMSTableException(&quot;Error insert entry to table '&quot; + tableName + &quot;' caused by &quot; +</span>
+<span class="nc" id="L340">                    e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L342">            closePreparedStatement(stmt);</span>
+<span class="nc" id="L343">            cleanupConnection(conn);</span>
+<span class="nc" id="L344">        }</span>
+    }
+
+    /**
+     * Delete workers data to worker db.
+     *
+     * @param workerId condition of the selection.
+     * @return isSuccess.
+     */
+    public boolean deleteWorkerGeneralDetails(String workerId) {
+<span class="nc" id="L354">        return this.delete(workerId, generateConditionWorkerID(QUESTION_MARK), WORKER_DETAILS_TABLE);</span>
+    }
+
+    /**
+     * Delete workers data to worker db.
+     *
+     * @param workerId condition of the selection.
+     * @return isSuccess.
+     */
+    public boolean deleteWorkerConfiguration(String workerId) {
+<span class="nc" id="L364">        return delete(workerId, generateConditionWorkerID(QUESTION_MARK), WORKER_CONFIG_TABLE);</span>
+    }
+
+    /**
+     * Delete manager data to manager db.
+     *
+     * @param managerId condition of the selection.
+     * @return isSuccess.
+     */
+    public boolean deleteManagerConfiguration(String managerId) {
+<span class="nc" id="L374">        return delete(managerId, generateConditionManagerID(QUESTION_MARK), MANAGER_CONFIG_TABLE);</span>
+    }
+
+    /**
+     * Delete workers data to worker db.
+     *
+     * @param tableName condition of the selection.
+     * @param nodeId
+     * @return isSuccess.
+     */
+    private boolean delete(String nodeId, String condition, String tableName) {
+<span class="nc" id="L385">        String resolvedDeleteQuery = resolveTableName(deleteQuery, tableName);</span>
+<span class="nc" id="L386">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L387">        PreparedStatement stmt = null;</span>
+        try {
+<span class="nc" id="L389">            stmt = conn.prepareStatement(resolvedDeleteQuery.replace(PLACEHOLDER_CONDITION,</span>
+                    SQL_WHERE + WHITESPACE + condition));
+<span class="nc" id="L391">            stmt.setString(1, nodeId);</span>
+<span class="nc" id="L392">            DBHandler.getInstance().delete(stmt);</span>
+<span class="nc" id="L393">            return true;</span>
+<span class="nc" id="L394">        } catch (SQLException e) {</span>
+<span class="nc" id="L395">            throw new RDBMSTableException(&quot;Error occurred while deleting the node:&quot; + nodeId + &quot; in a table &quot; +</span>
+<span class="nc" id="L396">                    tableName + DATASOURCE_ID + &quot; due to &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L398">            closePreparedStatement(stmt);</span>
+<span class="nc" id="L399">            cleanupConnection(conn);</span>
+<span class="nc" id="L400">        }</span>
+    }
+
+
+    /**
+     * Select worker from the worker DB.
+     *
+     * @param workerId condition of the selection.
+     * @return list of object.
+     */
+
+    public WorkerGeneralDetails selectWorkerGeneralDetails(String workerId) {
+<span class="nc" id="L412">        String columnNames = WorkerGeneralDetails.getColumnLabeles();</span>
+<span class="nc" id="L413">        List&lt;Object&gt; row = this.select(generateConditionWorkerID(QUESTION_MARK), columnNames, WORKER_DETAILS_TABLE,</span>
+                new String[] {workerId});
+<span class="nc bnc" id="L415" title="All 2 branches missed.">        if (!row.isEmpty()) {</span>
+<span class="nc" id="L416">            WorkerGeneralDetails details = new WorkerGeneralDetails();</span>
+            try {
+<span class="nc" id="L418">                details.setArrayList(row);</span>
+<span class="nc" id="L419">            } catch (StatusDashboardValidationException e) {</span>
+<span class="nc" id="L420">                logger.error(&quot;Error mapping the data in row in worker general details due to &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L421">            }</span>
+<span class="nc" id="L422">            return details;</span>
+        } else {
+<span class="nc" id="L424">            return null;</span>
+        }
+    }
+
+    /**
+     * Select worker from the worker DB.
+     *
+     * @param workerId condition of the selection.
+     * @return list of object.
+     */
+    public String selectWorkerCarbonID(String workerId) {
+<span class="nc" id="L435">        String columnNames = &quot;CARBONID&quot;;</span>
+<span class="nc" id="L436">        List&lt;Object&gt; row = this.select(generateConditionWorkerID(QUESTION_MARK), columnNames, WORKER_DETAILS_TABLE,</span>
+                new String[] {workerId});
+<span class="nc bnc" id="L438" title="All 2 branches missed.">        if (row.size() &gt; 0) {</span>
+<span class="nc" id="L439">            return (String) row.get(0);</span>
+        } else {
+<span class="nc" id="L441">            return null;</span>
+        }
+    }
+
+    /**
+     * Select worker from the worker DB.
+     *
+     * @param workerId condition of the selection.
+     * @return list of object.
+     */
+    public NodeConfigurationDetails selectWorkerConfigurationDetails(String workerId) {
+<span class="nc" id="L452">        String columnNames = NodeConfigurationDetails.getColumnLabeles();</span>
+<span class="nc" id="L453">        List&lt;Object&gt; row = this.select(generateConditionWorkerID(QUESTION_MARK), columnNames, WORKER_CONFIG_TABLE,</span>
+                new String[] {workerId});
+<span class="nc bnc" id="L455" title="All 2 branches missed.">        if (!row.isEmpty()) {</span>
+<span class="nc" id="L456">            NodeConfigurationDetails details = new NodeConfigurationDetails();</span>
+            try {
+<span class="nc" id="L458">                details.setArrayList(row);</span>
+<span class="nc" id="L459">            } catch (Exception e) {</span>
+<span class="nc" id="L460">                logger.error(&quot;Error mapping the data in row : &quot; + row.toString() + &quot; due to &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L461">            }</span>
+<span class="nc" id="L462">            return details;</span>
+        } else {
+<span class="nc" id="L464">            return null;</span>
+        }
+    }
+
+    /**
+     * Select worker from the worker DB.
+     *
+     * @param condition condition of the selection.
+     * @param columns   column labels needed to get
+     * @return list of object.
+     */
+    private List&lt;Object&gt; select(String condition, String columns, String tableName, String[] parameters) {
+<span class="nc" id="L476">        String resolvedSelectQuery = resolveTableName(this.selectQuery, tableName);</span>
+<span class="nc" id="L477">        Map&lt;String, String&gt; attributesTypes = workerAttributeTypeMap.get(tableName);</span>
+<span class="nc" id="L478">        Connection conn = this.getConnection();</span>
+<span class="nc" id="L479">        List&lt;Object&gt; row = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L480">        String[] columnLabels = columns.split(&quot;,&quot;);</span>
+<span class="nc" id="L481">        PreparedStatement stmt = null;</span>
+<span class="nc" id="L482">        ResultSet rs = null;</span>
+        try {
+<span class="nc" id="L484">            stmt = conn.prepareStatement(DBTableUtils.getInstance().formatQueryWithCondition</span>
+<span class="nc" id="L485">                    (resolvedSelectQuery.replace(PLACEHOLDER_COLUMNS, String.format(&quot; %s &quot;, columns)), condition));</span>
+<span class="nc bnc" id="L486" title="All 2 branches missed.">            for (int i = 1; i &lt;= parameters.length; i++) {</span>
+<span class="nc" id="L487">                stmt.setString(i, parameters[i - 1]);</span>
+            }
+<span class="nc" id="L489">            rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc bnc" id="L490" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc bnc" id="L491" title="All 2 branches missed.">                for (String columnLabel : columnLabels) {</span>
+<span class="nc" id="L492">                    row.add(DBTableUtils.getInstance().fetchData(rs, columnLabel, attributesTypes.get</span>
+<span class="nc" id="L493">                            (columnLabel.trim()), statusDashboardQueryManager));</span>
+                }
+            }
+<span class="nc" id="L496">            rs.close();</span>
+<span class="nc" id="L497">            stmt.close();</span>
+<span class="nc" id="L498">        } catch (SQLException e) {</span>
+<span class="nc" id="L499">            throw new RDBMSTableException(&quot;Error retrieving records from table due to &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L501">            try {</span>
+<span class="nc bnc" id="L502" title="All 4 branches missed.">                if (rs != null) {</span>
+<span class="nc" id="L503">                    rs.close();</span>
+                }
+<span class="nc" id="L505">            } catch (SQLException e) {</span>
+                //ignore
+<span class="nc" id="L507">            }</span>
+            try {
+<span class="nc bnc" id="L509" title="All 4 branches missed.">                if (stmt != null) {</span>
+<span class="nc" id="L510">                    stmt.close();</span>
+                }
+<span class="nc" id="L512">            } catch (SQLException e) {</span>
+                //ignore
+<span class="nc" id="L514">            }</span>
+<span class="nc" id="L515">            cleanupConnection(conn);</span>
+<span class="nc" id="L516">        }</span>
+<span class="nc" id="L517">        return row;</span>
+    }
+
+    /**
+     * Select worker from the worker DB.
+     *
+     * @return list of object.
+     */
+    public List&lt;NodeConfigurationDetails&gt; selectAllWorkers() {
+<span class="nc" id="L526">        String resolvedSelectQuery = resolveTableName(this.selectQuery, WORKER_CONFIG_TABLE);</span>
+<span class="nc" id="L527">        Map&lt;String, String&gt; attributesTypes = workerAttributeTypeMap.get(WORKER_CONFIG_TABLE);</span>
+<span class="nc" id="L528">        Connection conn = this.getConnection();</span>
+        NodeConfigurationDetails row;
+<span class="nc" id="L530">        List&lt;NodeConfigurationDetails&gt; workerConfigurationDetails = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L531">        PreparedStatement stmt = null;</span>
+        try {
+<span class="nc" id="L533">            stmt = conn.prepareStatement(resolvedSelectQuery.replace(PLACEHOLDER_COLUMNS, WHITESPACE +</span>
+<span class="nc" id="L534">                    NodeConfigurationDetails.getColumnLabeles()).replace(PLACEHOLDER_CONDITION, &quot;&quot;));</span>
+<span class="nc" id="L535">            ResultSet rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc bnc" id="L536" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L537">                row = new NodeConfigurationDetails();</span>
+<span class="nc" id="L538">                row.setPort((Integer) DBTableUtils.getInstance().fetchData(rs, &quot;PORT&quot;, attributesTypes.get</span>
+<span class="nc" id="L539">                        (&quot;PORT&quot;), statusDashboardQueryManager));</span>
+<span class="nc" id="L540">                row.setHost((String) DBTableUtils.getInstance().fetchData(rs, &quot;HOST&quot;, attributesTypes.get</span>
+<span class="nc" id="L541">                        (&quot;HOST&quot;), statusDashboardQueryManager));</span>
+<span class="nc" id="L542">                row.setWorkerId((String) DBTableUtils.getInstance().fetchData(rs, &quot;WORKERID&quot;,</span>
+<span class="nc" id="L543">                        attributesTypes.get(&quot;WORKERID&quot;), statusDashboardQueryManager));</span>
+<span class="nc" id="L544">                workerConfigurationDetails.add(row);</span>
+
+            }
+<span class="nc" id="L547">            stmt.close();</span>
+<span class="nc" id="L548">            rs.close();</span>
+<span class="nc" id="L549">        } catch (SQLException e) {</span>
+<span class="nc" id="L550">            throw new RDBMSTableException(&quot;Error retrieving records from table '&quot; + &quot;WORKER CONFIGURATION&quot; +</span>
+<span class="nc" id="L551">                    &quot; due to &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc bnc" id="L553" title="All 4 branches missed.">            if (stmt != null) {</span>
+                try {
+<span class="nc" id="L555">                    stmt.close();</span>
+<span class="nc" id="L556">                } catch (SQLException e) {</span>
+                    //ignore
+<span class="nc" id="L558">                }</span>
+            }
+<span class="nc" id="L560">            cleanupConnection(conn);</span>
+<span class="nc" id="L561">        }</span>
+<span class="nc" id="L562">        return workerConfigurationDetails;</span>
+    }
+
+    /**
+     * select managers in the database.
+     */
+    public List&lt;NodeConfigurationDetails&gt; getAllManagerConfigDetails() {
+<span class="nc" id="L569">        String resolvedSelectQuery = resolveTableName(this.selectQuery, MANAGER_CONFIG_TABLE);</span>
+<span class="nc" id="L570">        Map&lt;String, String&gt; attributesTypes = workerAttributeTypeMap.get(MANAGER_CONFIG_TABLE);</span>
+<span class="nc" id="L571">        Connection conn = this.getConnection();</span>
+        NodeConfigurationDetails row;
+<span class="nc" id="L573">        List&lt;NodeConfigurationDetails&gt; workerConfigurationDetails = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L574">        PreparedStatement stmt = null;</span>
+        try {
+<span class="nc" id="L576">            stmt = conn.prepareStatement(resolvedSelectQuery.replace(PLACEHOLDER_COLUMNS, WHITESPACE +</span>
+<span class="nc" id="L577">                    NodeConfigurationDetails.getManagerColumnLabeles()).replace(PLACEHOLDER_CONDITION, &quot;&quot;));</span>
+<span class="nc" id="L578">            ResultSet rs = DBHandler.getInstance().select(stmt);</span>
+<span class="nc bnc" id="L579" title="All 2 branches missed.">            while (rs.next()) {</span>
+<span class="nc" id="L580">                row = new NodeConfigurationDetails();</span>
+<span class="nc" id="L581">                row.setPort((Integer) DBTableUtils.getInstance().fetchData(rs, &quot;PORT&quot;, attributesTypes.get</span>
+<span class="nc" id="L582">                        (Constants.NODE_PORT_VALUE), statusDashboardQueryManager));</span>
+<span class="nc" id="L583">                row.setHost((String) DBTableUtils.getInstance().fetchData(rs, &quot;HOST&quot;, attributesTypes.get</span>
+<span class="nc" id="L584">                        (Constants.NODE_HOST_NAME), statusDashboardQueryManager));</span>
+<span class="nc" id="L585">                row.setWorkerId((String) DBTableUtils.getInstance().fetchData(rs, &quot;MANAGERID&quot;,</span>
+<span class="nc" id="L586">                        attributesTypes.get(Constants.MANAGER_HOST_PORT),</span>
+                        statusDashboardQueryManager));
+<span class="nc" id="L588">                workerConfigurationDetails.add(row);</span>
+            }
+<span class="nc" id="L590">            stmt.close();</span>
+<span class="nc" id="L591">            rs.close();</span>
+<span class="nc" id="L592">        } catch (SQLException e) {</span>
+<span class="nc" id="L593">            throw new RDBMSTableException(&quot;Error retrieving records from table '&quot; + &quot;MANAGER CONFIGURATION&quot; +</span>
+<span class="nc" id="L594">                    &quot; due to &quot; + e.getMessage(), e);</span>
+        } finally {
+<span class="nc" id="L596">            closePreparedStatement(stmt);</span>
+<span class="nc" id="L597">            cleanupConnection(conn);</span>
+<span class="nc" id="L598">        }</span>
+<span class="nc" id="L599">        return workerConfigurationDetails;</span>
+    }
+
+    /**
+     * Generated thw worker ID condition.
+     *
+     * @param workerIdPlaceHolder sp-workerID
+     * @return generated condition of workerID
+     */
+    private String generateConditionWorkerID(String workerIdPlaceHolder) {
+<span class="nc" id="L609">        return WORKERID_EXPRESSION.replace(WORKERID_PLACEHOLDER, workerIdPlaceHolder);</span>
+    }
+
+    /**
+     * Generated thw worker ID condition.
+     *
+     * @param managerIdPlaceHolder sp-workerID
+     * @return generated condition of workerID
+     */
+    private String generateConditionManagerID(String managerIdPlaceHolder) {
+<span class="nc" id="L619">        return MANAGERID_EXPRESSION.replace(MANAGERID_PLACEHOLDER, managerIdPlaceHolder);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

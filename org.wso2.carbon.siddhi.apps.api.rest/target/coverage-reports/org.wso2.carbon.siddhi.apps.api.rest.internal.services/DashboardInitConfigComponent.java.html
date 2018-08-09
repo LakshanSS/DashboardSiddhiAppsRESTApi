@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DashboardInitConfigComponent.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.internal.services</a> &gt; <span class="el_source">DashboardInitConfigComponent.java</span></div><h1>DashboardInitConfigComponent.java</h1><pre class="source lang-java linenums">/*
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ * WSO2 Inc. licenses this file to you under the Apache License,
+ * Version 2.0 (the &quot;License&quot;); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.internal.services;
+
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.config.ConfigurationException;
+import org.wso2.carbon.siddhi.apps.api.rest.configuration.DefaultConfigurationBuilder;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * This component handle the all the initialization tasks.
+ */
+@Component(
+        name = &quot;org.wso2.carbon.status.dashboard.core.internal.services.DashboardInitConfigComponent&quot;,
+        service = DashboardInitConfigComponent.class,
+        immediate = true
+)
+<span class="nc" id="L41">public class DashboardInitConfigComponent {</span>
+<span class="nc" id="L42">    private static final Logger logger = LoggerFactory.getLogger(DashboardInitConfigComponent.class);</span>
+    
+    @Activate
+    protected void start(BundleContext bundleContext) {
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L47">            logger.debug(&quot;@Reference(bind) DashboardInitConfigComponent&quot;);</span>
+        }
+        try {
+<span class="nc" id="L50">            DeploymentConfigs deploymentConfigurations = MonitoringDataHolder.getInstance()</span>
+<span class="nc" id="L51">                    .getConfigProvider().getConfigurationObject(DeploymentConfigs.class);</span>
+<span class="nc" id="L52">            DeploymentConfigs dashboardDefaultConfiguration = DefaultConfigurationBuilder.getInstance()</span>
+<span class="nc" id="L53">                    .getConfiguration();</span>
+<span class="nc" id="L54">            DeploymentConfigs resolvedConfiguration = mergeQueries(dashboardDefaultConfiguration,</span>
+                    deploymentConfigurations);
+<span class="nc" id="L56">            MonitoringDataHolder.getInstance().setStatusDashboardDeploymentConfigs(resolvedConfiguration);</span>
+<span class="nc" id="L57">        } catch (ConfigurationException e) {</span>
+<span class="nc" id="L58">            logger.error(&quot;Error in reading configuration from the deployment.YML&quot;, e);</span>
+<span class="nc" id="L59">        }</span>
+        
+<span class="nc" id="L61">    }</span>
+    
+    @Deactivate
+    protected void stop() {
+<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L66">            logger.debug(&quot;@Reference(unbind) DashboardInitConfigComponent&quot;);</span>
+        }
+<span class="nc" id="L68">        MonitoringDataHolder.getInstance().setStatusDashboardDeploymentConfigs(null);</span>
+<span class="nc" id="L69">    }</span>
+    
+    /**
+     * Defauld and deployment Query merger.
+     *
+     * @param defaultQueries
+     * @return
+     */
+    private DeploymentConfigs mergeQueries(DeploymentConfigs defaultQueries,
+                                           DeploymentConfigs deploymentQueries) {
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (deploymentQueries == null) {</span>
+<span class="nc" id="L80">            return defaultQueries;</span>
+        } else {
+<span class="nc" id="L82">            DeploymentConfigs resolvedConfiguration = new DeploymentConfigs();</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            String adminUsername = deploymentQueries.getUsername() == null ? defaultQueries.getUsername()</span>
+<span class="nc" id="L84">                    : deploymentQueries.getUsername();</span>
+<span class="nc" id="L85">            resolvedConfiguration.setUsername(adminUsername);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            String adminPassword = deploymentQueries.getPassword() == null ? defaultQueries.getPassword()</span>
+<span class="nc" id="L87">                    : deploymentQueries.getPassword();</span>
+<span class="nc" id="L88">            resolvedConfiguration.setPassword(adminPassword);</span>
+<span class="nc" id="L89">            Integer pollingInterval =</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                    deploymentQueries.getPollingInterval() == null ? defaultQueries.getPollingInterval()</span>
+<span class="nc" id="L91">                            : deploymentQueries.getPollingInterval();</span>
+<span class="nc" id="L92">            resolvedConfiguration.setPollingInterval(pollingInterval);</span>
+            
+<span class="nc bnc" id="L94" title="All 2 branches missed.">            String metricsDatasourceName = deploymentQueries.getMetricsDatasourceName() == null ?</span>
+<span class="nc" id="L95">                    defaultQueries.getMetricsDatasourceName()</span>
+<span class="nc" id="L96">                    : deploymentQueries.getMetricsDatasourceName();</span>
+<span class="nc" id="L97">            resolvedConfiguration.setMetricsDatasourceName(metricsDatasourceName);</span>
+            
+<span class="nc bnc" id="L99" title="All 2 branches missed.">            String dashboardDatasourceName = deploymentQueries.getDashboardDatasourceName() == null ?</span>
+<span class="nc" id="L100">                    defaultQueries.getDashboardDatasourceName()</span>
+<span class="nc" id="L101">                    : deploymentQueries.getDashboardDatasourceName();</span>
+<span class="nc" id="L102">            resolvedConfiguration.setDashboardDatasourceName(dashboardDatasourceName);</span>
+            
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            int connectionTimeout = deploymentQueries.getWorkerConnectionConfigurations().getConnectionTimeOut() ==</span>
+<span class="nc" id="L105">                    null ? defaultQueries.getWorkerConnectionConfigurations().getConnectionTimeOut()</span>
+<span class="nc" id="L106">                    : deploymentQueries.getWorkerConnectionConfigurations().getConnectionTimeOut();</span>
+            
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            int readTimeOut = deploymentQueries.getWorkerConnectionConfigurations().getReadTimeOut() == null ?</span>
+<span class="nc" id="L109">                    defaultQueries.getWorkerConnectionConfigurations().getReadTimeOut()</span>
+<span class="nc" id="L110">                    : deploymentQueries.getWorkerConnectionConfigurations().getReadTimeOut();</span>
+            
+<span class="nc" id="L112">            resolvedConfiguration.setWorkerConnectionConfigurations(connectionTimeout, readTimeOut);</span>
+            
+<span class="nc" id="L114">            List&lt;String&gt; sysAdminRoles = deploymentQueries.getSysAdminRoles();</span>
+            
+<span class="nc" id="L116">            List&lt;String&gt; developerRoles = deploymentQueries.getDeveloperRoles();</span>
+            
+<span class="nc" id="L118">            List&lt;String&gt; viewerRoles = deploymentQueries.getViewerRoles();</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            if (sysAdminRoles == null) {</span>
+<span class="nc" id="L120">                resolvedConfiguration.setSysAdminRoles(new ArrayList&lt;&gt;());</span>
+            } else {
+<span class="nc" id="L122">                resolvedConfiguration.setSysAdminRoles(sysAdminRoles);</span>
+            }
+            
+<span class="nc bnc" id="L125" title="All 2 branches missed.">            if (developerRoles == null) {</span>
+<span class="nc" id="L126">                resolvedConfiguration.setDeveloperRoles(new ArrayList&lt;&gt;());</span>
+            } else {
+<span class="nc" id="L128">                resolvedConfiguration.setDeveloperRoles(developerRoles);</span>
+            }
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            if (viewerRoles == null) {</span>
+<span class="nc" id="L131">                resolvedConfiguration.setViewerRoles(new ArrayList&lt;&gt;());</span>
+            } else {
+<span class="nc" id="L133">                resolvedConfiguration.setViewerRoles(viewerRoles);</span>
+            }
+<span class="nc" id="L135">            return resolvedConfiguration;</span>
+        }
+        
+        
+    }
+    
+    @Reference(
+            name = &quot;org.wso2.carbon.status.dashboard.core.internal.services.DatasourceServiceComponent&quot;,
+            service = DatasourceServiceComponent.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = &quot;unregisterServiceDatasource&quot;
+    )
+    public void regiterServiceDatasource(DatasourceServiceComponent datasourceServiceComponent) {
+<span class="nc bnc" id="L149" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L150">            logger.debug(&quot;@Reference(bind) DatasourceServiceComponent&quot;);</span>
+        }
+        
+<span class="nc" id="L153">    }</span>
+    
+    public void unregisterServiceDatasource(DatasourceServiceComponent datasourceServiceComponent) {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (logger.isDebugEnabled()) {</span>
+<span class="nc" id="L157">            logger.debug(&quot;@Reference(unbind) DatasourceServiceComponent&quot;);</span>
+        }
+<span class="nc" id="L159">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

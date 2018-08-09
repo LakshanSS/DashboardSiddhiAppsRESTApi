@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DBTableUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils</a> &gt; <span class="el_source">DBTableUtils.java</span></div><h1>DBTableUtils.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.QueryManager;
+import org.wso2.carbon.siddhi.apps.api.rest.exception.RDBMSTableException;
+import org.wso2.carbon.siddhi.apps.api.rest.impl.utils.Constants;
+
+import java.sql.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
+
+import static org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants.*;
+
+/**
+ * Class which holds the utility methods which are used by various units in the RDBMS Event Table implementation.
+ */
+public class DBTableUtils {
+<span class="nc" id="L39">    private static final Logger logger = LoggerFactory.getLogger(DBTableUtils.class);</span>
+<span class="nc" id="L40">    private static DBTableUtils instance = new DBTableUtils();</span>
+    
+<span class="nc" id="L42">    private DBTableUtils() {</span>
+<span class="nc" id="L43">    }</span>
+    
+    public static DBTableUtils getInstance() {
+<span class="nc" id="L46">        return instance;</span>
+    }
+    
+    //this return minutes
+    public static long getAggregation(long interval) {
+<span class="nc bnc" id="L51" title="All 2 branches missed.">        if (interval &lt;= 3600000) { //less than 6 hours</span>
+<span class="nc" id="L52">            return interval / 60000;</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">        } else if (interval &lt;= 21600000) { //6 hours</span>
+<span class="nc" id="L54">            return 5; // 5 mins</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        } else if (interval &lt;= 86400000) { //24 hours</span>
+<span class="nc" id="L56">            return 60; // 1hour</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        } else if (interval &lt;= 604800000) { // 1week</span>
+<span class="nc" id="L58">            return 360;  // 6 hours</span>
+        } else {
+<span class="nc" id="L60">            return 1440; // 1day</span>
+        }
+    }
+    
+    public Map&lt;String, String&gt; loadMetricsTypeSelection() {
+<span class="nc" id="L65">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L66">        attributeSelection.put(&quot;memory&quot;, METRICS_TABLE_METRIC_GAUGE);</span>
+<span class="nc" id="L67">        attributeSelection.put(&quot;throughput&quot;, METRICS_TABLE_METRIC_METER);</span>
+<span class="nc" id="L68">        attributeSelection.put(&quot;latency&quot;, METRICS_TABLE_METRIC_TIMER);</span>
+<span class="nc" id="L69">        attributeSelection.put(&quot;events&quot;, METRICS_TABLE_METRIC_HISTOGRAM);</span>
+<span class="nc" id="L70">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadMetricsUnitsSelection() {
+<span class="nc" id="L74">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L75">        attributeSelection.put(&quot;memory&quot;, &quot;(bytes)&quot;);</span>
+<span class="nc" id="L76">        attributeSelection.put(&quot;throughput&quot;, &quot;(events/second)&quot;);</span>
+<span class="nc" id="L77">        attributeSelection.put(&quot;latency&quot;, &quot;(milliseconds)&quot;);</span>
+<span class="nc" id="L78">        attributeSelection.put(&quot;events&quot;, &quot;events&quot;);</span>
+<span class="nc" id="L79">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadWorkerConfigTableTuples(QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L83">        String intType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_INTEGER);</span>
+<span class="nc" id="L84">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L85">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L86">        attributeSelection.put(Constants.WORKER_HOST_PORT, stringType);</span>
+<span class="nc" id="L87">        attributeSelection.put(Constants.NODE_HOST_NAME, stringType);</span>
+<span class="nc" id="L88">        attributeSelection.put(Constants.NODE_PORT_VALUE, intType);</span>
+<span class="nc" id="L89">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, Map&lt;String, String&gt;&gt; loadWorkerAttributeTypeMap(QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L93">        String integerType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_INTEGER);</span>
+<span class="nc" id="L94">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+        
+<span class="nc" id="L96">        Map&lt;String, Map&lt;String, String&gt;&gt; attributesTypeMaps = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L97">        Map&lt;String, String&gt; attributesWorkerConfigTable = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L98">        attributesWorkerConfigTable.put(Constants.WORKER_HOST_PORT, stringType);</span>
+<span class="nc" id="L99">        attributesWorkerConfigTable.put(Constants.NODE_HOST_NAME, stringType);</span>
+<span class="nc" id="L100">        attributesWorkerConfigTable.put(Constants.NODE_PORT_VALUE, integerType);</span>
+<span class="nc" id="L101">        Map&lt;String, String&gt; attributesWorkerDetailsTable = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L102">        attributesWorkerDetailsTable.put(&quot;CARBONID&quot;, stringType);</span>
+<span class="nc" id="L103">        attributesWorkerDetailsTable.put(Constants.WORKER_HOST_PORT, stringType);</span>
+<span class="nc" id="L104">        attributesWorkerDetailsTable.put(&quot;JAVARUNTIMENAME&quot;, stringType);</span>
+<span class="nc" id="L105">        attributesWorkerDetailsTable.put(&quot;JAVAVMVERSION&quot;, stringType);</span>
+<span class="nc" id="L106">        attributesWorkerDetailsTable.put(&quot;JAVAVMVENDOR&quot;, stringType);</span>
+<span class="nc" id="L107">        attributesWorkerDetailsTable.put(&quot;JAVAHOME&quot;, stringType);</span>
+<span class="nc" id="L108">        attributesWorkerDetailsTable.put(&quot;JAVAVERSION&quot;, stringType);</span>
+<span class="nc" id="L109">        attributesWorkerDetailsTable.put(&quot;OSNAME&quot;, stringType);</span>
+<span class="nc" id="L110">        attributesWorkerDetailsTable.put(&quot;OSVERSION&quot;, stringType);</span>
+<span class="nc" id="L111">        attributesWorkerDetailsTable.put(&quot;USERHOME&quot;, stringType);</span>
+<span class="nc" id="L112">        attributesWorkerDetailsTable.put(&quot;USERTIMEZONE&quot;, stringType);</span>
+<span class="nc" id="L113">        attributesWorkerDetailsTable.put(&quot;USERNAME&quot;, stringType);</span>
+<span class="nc" id="L114">        attributesWorkerDetailsTable.put(&quot;USERCOUNTRY&quot;, stringType);</span>
+<span class="nc" id="L115">        attributesWorkerDetailsTable.put(&quot;REPOLOCATION&quot;, stringType);</span>
+<span class="nc" id="L116">        attributesWorkerDetailsTable.put(&quot;SERVERSTARTTIME&quot;, stringType);</span>
+        
+<span class="nc" id="L118">        Map&lt;String, String&gt; attributeManagerConfigTable = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L119">        attributeManagerConfigTable.put(Constants.MANAGER_HOST_PORT, stringType);</span>
+<span class="nc" id="L120">        attributeManagerConfigTable.put(Constants.NODE_HOST_NAME, stringType);</span>
+<span class="nc" id="L121">        attributeManagerConfigTable.put(Constants.NODE_PORT_VALUE, integerType);</span>
+        
+<span class="nc" id="L123">        attributesTypeMaps.put(&quot;WORKERS_CONFIGURATION&quot;, attributesWorkerConfigTable);</span>
+<span class="nc" id="L124">        attributesTypeMaps.put(&quot;WORKERS_DETAILS&quot;, attributesWorkerDetailsTable);</span>
+        
+<span class="nc" id="L126">        attributesTypeMaps.put(&quot;MANAGER_CONFIGURATION&quot;, attributeManagerConfigTable);</span>
+<span class="nc" id="L127">        return attributesTypeMaps;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadWorkerGeneralTableTuples(QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L131">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L132">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L133">        attributeSelection.put(&quot;CARBONID&quot;, stringType);</span>
+<span class="nc" id="L134">        attributeSelection.put(&quot;WORKERID&quot;, stringType);</span>
+<span class="nc" id="L135">        attributeSelection.put(&quot;JAVARUNTIMENAME&quot;, stringType);</span>
+<span class="nc" id="L136">        attributeSelection.put(&quot;JAVAVMVERSION&quot;, stringType);</span>
+<span class="nc" id="L137">        attributeSelection.put(&quot;JAVAVMVENDOR&quot;, stringType);</span>
+<span class="nc" id="L138">        attributeSelection.put(&quot;JAVAHOME&quot;, stringType);</span>
+<span class="nc" id="L139">        attributeSelection.put(&quot;JAVAVERSION&quot;, stringType);</span>
+<span class="nc" id="L140">        attributeSelection.put(&quot;OSNAME&quot;, stringType);</span>
+<span class="nc" id="L141">        attributeSelection.put(&quot;OSVERSION&quot;, stringType);</span>
+<span class="nc" id="L142">        attributeSelection.put(&quot;USERHOME&quot;, stringType);</span>
+<span class="nc" id="L143">        attributeSelection.put(&quot;USERTIMEZONE&quot;, stringType);</span>
+<span class="nc" id="L144">        attributeSelection.put(&quot;USERNAME&quot;, stringType);</span>
+<span class="nc" id="L145">        attributeSelection.put(&quot;USERCOUNTRY&quot;, stringType);</span>
+<span class="nc" id="L146">        attributeSelection.put(&quot;REPOLOCATION&quot;, stringType);</span>
+<span class="nc" id="L147">        attributeSelection.put(&quot;SERVERSTARTTIME&quot;, stringType);</span>
+<span class="nc" id="L148">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadMetricsValueSelection() {
+<span class="nc" id="L152">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L153">        attributeSelection.put(METRICS_TABLE_METRIC_COUNTER, &quot;TIMESTAMP,COUNT&quot;);</span>
+<span class="nc" id="L154">        attributeSelection.put(METRICS_TABLE_METRIC_GAUGE, &quot;TIMESTAMP,VALUE&quot;);</span>
+<span class="nc" id="L155">        attributeSelection.put(METRICS_TABLE_METRIC_HISTOGRAM, &quot;TIMESTAMP,MEAN&quot;);</span>
+<span class="nc" id="L156">        attributeSelection.put(METRICS_TABLE_METRIC_METER, &quot;TIMESTAMP,M1_RATE&quot;);</span>
+<span class="nc" id="L157">        attributeSelection.put(METRICS_TABLE_METRIC_TIMER, &quot;TIMESTAMP,M1_RATE&quot;);</span>
+<span class="nc" id="L158">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadMetricsAllValueSelection() {
+<span class="nc" id="L162">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L163">        attributeSelection.put(METRICS_TABLE_METRIC_COUNTER, &quot;TIMESTAMP,COUNT&quot;);</span>
+<span class="nc" id="L164">        attributeSelection.put(METRICS_TABLE_METRIC_GAUGE, &quot;TIMESTAMP,VALUE&quot;);</span>
+<span class="nc" id="L165">        attributeSelection.put(METRICS_TABLE_METRIC_HISTOGRAM, &quot;TIMESTAMP,MAX,MEAN,MIN,STDDEV,P75,P95,P99,P999&quot;);</span>
+<span class="nc" id="L166">        attributeSelection.put(METRICS_TABLE_METRIC_METER, &quot;TIMESTAMP,MEAN_RATE,M1_RATE,M5_RATE,M15_RATE&quot;);</span>
+<span class="nc" id="L167">        attributeSelection.put(METRICS_TABLE_METRIC_TIMER, &quot;TIMESTAMP,MAX,MEAN,MIN,STDDEV,P75,P95,P99,P999,MEAN_RATE,&quot; +</span>
+                &quot;M1_RATE,M5_RATE,M15_RATE&quot;);
+<span class="nc" id="L169">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadAggRowMetricsAllValueSelection() {
+<span class="nc" id="L173">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L174">        attributeSelection.put(METRICS_TABLE_METRIC_COUNTER, &quot;AGG_TIMESTAMP,COUNT&quot;);</span>
+<span class="nc" id="L175">        attributeSelection.put(METRICS_TABLE_METRIC_GAUGE, &quot;AGG_TIMESTAMP,VALUE&quot;);</span>
+<span class="nc" id="L176">        attributeSelection.put(METRICS_TABLE_METRIC_HISTOGRAM, &quot;AGG_TIMESTAMP,MEAN,MAX,MIN,STDDEV,P75,P95,P99,P999&quot;);</span>
+<span class="nc" id="L177">        attributeSelection.put(METRICS_TABLE_METRIC_METER, &quot;AGG_TIMESTAMP,M1_RATE,MEAN_RATE,M5_RATE,M15_RATE&quot;);</span>
+<span class="nc" id="L178">        attributeSelection.put(METRICS_TABLE_METRIC_TIMER, &quot;AGG_TIMESTAMP,MEAN,MAX,MIN,STDDEV,P75,P95,P99,P999,MEAN_RATE,&quot; +</span>
+                &quot;M1_RATE,M5_RATE,M15_RATE&quot;);
+<span class="nc" id="L180">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadAggMetricsAllValueSelection() {
+<span class="nc" id="L184">        Map&lt;String, String&gt; attributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L185">        attributeSelection.put(METRICS_TABLE_METRIC_COUNTER, &quot;AVG(COUNT) as COUNT&quot;);</span>
+<span class="nc" id="L186">        attributeSelection.put(METRICS_TABLE_METRIC_GAUGE, &quot;AVG(CAST(VALUE as DECIMAL(22,2))) as VALUE&quot;);</span>
+<span class="nc" id="L187">        attributeSelection.put(METRICS_TABLE_METRIC_HISTOGRAM, &quot;AVG(MAX) as MAX, AVG(MEAN) as MEAN, &quot; +</span>
+                &quot;AVG(MIN) as MIN, AVG(STDDEV) as STDDEV, AVG(P75) as P75, AVG(P95) as P95, AVG(P99) as P99,&quot; +
+                &quot;AVG(P999) as P999&quot;);
+<span class="nc" id="L190">        attributeSelection.put(METRICS_TABLE_METRIC_METER, &quot;AVG(MEAN_RATE) as MEAN_RATE,AVG(M1_RATE) &quot; +</span>
+                &quot;as M1_RATE,AVG(M5_RATE) as M5_RATE,AVG(M15_RATE) as M15_RATE&quot;);
+<span class="nc" id="L192">        attributeSelection.put(METRICS_TABLE_METRIC_TIMER, &quot;AVG(MAX) as MAX, AVG(MEAN) as MEAN, AVG(MIN) as&quot; +</span>
+                &quot; MIN, AVG(STDDEV) as STDDEV, AVG(P75) as P75, AVG(P95) as P95, AVG(P99) as P99, AVG(P999) as P999, &quot; +
+                &quot;AVG(MEAN_RATE) as MEAN_RATE, AVG(M1_RATE) as M1_RATE, AVG(M5_RATE) as M5_RATE,&quot; +
+                &quot; AVG(M15_RATE) as M15_RATE&quot;);
+<span class="nc" id="L196">        return attributeSelection;</span>
+    }
+    
+    public Map&lt;String, Map&lt;String, String&gt;&gt; loadMetricsAttributeTypeMap(QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L200">        String doubleType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_DOUBLE);</span>
+<span class="nc" id="L201">        String longType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_LONG);</span>
+<span class="nc" id="L202">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L203">        Map&lt;String, String&gt; attributesCounterTable = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L204">        attributesCounterTable.put(&quot;ID&quot;, longType);</span>
+<span class="nc" id="L205">        attributesCounterTable.put(&quot;SOURCE&quot;, stringType);</span>
+<span class="nc" id="L206">        attributesCounterTable.put(&quot;TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L207">        attributesCounterTable.put(&quot;AGG_TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L208">        attributesCounterTable.put(&quot;NAME&quot;, stringType);</span>
+<span class="nc" id="L209">        attributesCounterTable.put(&quot;COUNT&quot;, longType);</span>
+<span class="nc" id="L210">        Map&lt;String, String&gt; attributesGaugeTable = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L211">        attributesGaugeTable.put(&quot;ID&quot;, longType);</span>
+<span class="nc" id="L212">        attributesGaugeTable.put(&quot;SOURCE&quot;, stringType);</span>
+<span class="nc" id="L213">        attributesGaugeTable.put(&quot;TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L214">        attributesGaugeTable.put(&quot;AGG_TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L215">        attributesGaugeTable.put(&quot;NAME&quot;, stringType);</span>
+<span class="nc" id="L216">        attributesGaugeTable.put(&quot;VALUE&quot;, stringType);</span>
+<span class="nc" id="L217">        Map&lt;String, String&gt; attributesHistogramTable = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L218">        attributesHistogramTable.put(&quot;ID&quot;, longType);</span>
+<span class="nc" id="L219">        attributesHistogramTable.put(&quot;SOURCE&quot;, stringType);</span>
+<span class="nc" id="L220">        attributesHistogramTable.put(&quot;TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L221">        attributesHistogramTable.put(&quot;AGG_TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L222">        attributesHistogramTable.put(&quot;NAME&quot;, stringType);</span>
+<span class="nc" id="L223">        attributesHistogramTable.put(&quot;COUNT&quot;, longType);</span>
+<span class="nc" id="L224">        attributesHistogramTable.put(&quot;MAX&quot;, doubleType);</span>
+<span class="nc" id="L225">        attributesHistogramTable.put(&quot;MEAN&quot;, doubleType);</span>
+<span class="nc" id="L226">        attributesHistogramTable.put(&quot;MIN&quot;, doubleType);</span>
+<span class="nc" id="L227">        attributesHistogramTable.put(&quot;STDDEV&quot;, doubleType);</span>
+<span class="nc" id="L228">        attributesHistogramTable.put(&quot;P50&quot;, doubleType);</span>
+<span class="nc" id="L229">        attributesHistogramTable.put(&quot;P75&quot;, doubleType);</span>
+<span class="nc" id="L230">        attributesHistogramTable.put(&quot;P95&quot;, doubleType);</span>
+<span class="nc" id="L231">        attributesHistogramTable.put(&quot;P98&quot;, doubleType);</span>
+<span class="nc" id="L232">        attributesHistogramTable.put(&quot;P99&quot;, doubleType);</span>
+<span class="nc" id="L233">        attributesHistogramTable.put(&quot;P999&quot;, doubleType);</span>
+<span class="nc" id="L234">        Map&lt;String, String&gt; attributesMeterTable = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L235">        attributesMeterTable.put(&quot;ID&quot;, longType);</span>
+<span class="nc" id="L236">        attributesMeterTable.put(&quot;SOURCE&quot;, stringType);</span>
+<span class="nc" id="L237">        attributesMeterTable.put(&quot;TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L238">        attributesMeterTable.put(&quot;AGG_TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L239">        attributesMeterTable.put(&quot;NAME&quot;, stringType);</span>
+<span class="nc" id="L240">        attributesMeterTable.put(&quot;COUNT&quot;, longType);</span>
+<span class="nc" id="L241">        attributesMeterTable.put(&quot;MEAN_RATE&quot;, doubleType);</span>
+<span class="nc" id="L242">        attributesMeterTable.put(&quot;M1_RATE&quot;, doubleType);</span>
+<span class="nc" id="L243">        attributesMeterTable.put(&quot;M5_RATE&quot;, doubleType);</span>
+<span class="nc" id="L244">        attributesMeterTable.put(&quot;M15_RATE&quot;, doubleType);</span>
+<span class="nc" id="L245">        attributesMeterTable.put(&quot;RATE_UNIT&quot;, stringType);</span>
+<span class="nc" id="L246">        Map&lt;String, String&gt; attributesTimerTable = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L247">        attributesTimerTable.put(&quot;ID&quot;, longType);</span>
+<span class="nc" id="L248">        attributesTimerTable.put(&quot;SOURCE&quot;, stringType);</span>
+<span class="nc" id="L249">        attributesTimerTable.put(&quot;TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L250">        attributesTimerTable.put(&quot;AGG_TIMESTAMP&quot;, longType);</span>
+<span class="nc" id="L251">        attributesTimerTable.put(&quot;NAME&quot;, stringType);</span>
+<span class="nc" id="L252">        attributesTimerTable.put(&quot;COUNT&quot;, longType);</span>
+<span class="nc" id="L253">        attributesTimerTable.put(&quot;MAX&quot;, doubleType);</span>
+<span class="nc" id="L254">        attributesTimerTable.put(&quot;MEAN&quot;, doubleType);</span>
+<span class="nc" id="L255">        attributesTimerTable.put(&quot;MIN&quot;, doubleType);</span>
+<span class="nc" id="L256">        attributesTimerTable.put(&quot;STDDEV&quot;, doubleType);</span>
+<span class="nc" id="L257">        attributesTimerTable.put(&quot;P50&quot;, doubleType);</span>
+<span class="nc" id="L258">        attributesTimerTable.put(&quot;P75&quot;, doubleType);</span>
+<span class="nc" id="L259">        attributesTimerTable.put(&quot;P95&quot;, doubleType);</span>
+<span class="nc" id="L260">        attributesTimerTable.put(&quot;P98&quot;, doubleType);</span>
+<span class="nc" id="L261">        attributesTimerTable.put(&quot;P99&quot;, doubleType);</span>
+<span class="nc" id="L262">        attributesTimerTable.put(&quot;P999&quot;, doubleType);</span>
+<span class="nc" id="L263">        attributesTimerTable.put(&quot;MEAN_RATE&quot;, doubleType);</span>
+<span class="nc" id="L264">        attributesTimerTable.put(&quot;M1_RATE&quot;, doubleType);</span>
+<span class="nc" id="L265">        attributesTimerTable.put(&quot;M5_RATE&quot;, doubleType);</span>
+<span class="nc" id="L266">        attributesTimerTable.put(&quot;M15_RATE&quot;, doubleType);</span>
+<span class="nc" id="L267">        attributesTimerTable.put(&quot;RATE_UNIT&quot;, stringType);</span>
+<span class="nc" id="L268">        attributesTimerTable.put(&quot;DURATION_UNIT&quot;, stringType);</span>
+        
+<span class="nc" id="L270">        Map&lt;String, Map&lt;String, String&gt;&gt; attributesTypeMaps = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L271">        attributesTypeMaps.put(METRICS_TABLE_METRIC_COUNTER, attributesCounterTable);</span>
+<span class="nc" id="L272">        attributesTypeMaps.put(METRICS_TABLE_METRIC_GAUGE, attributesGaugeTable);</span>
+<span class="nc" id="L273">        attributesTypeMaps.put(METRICS_TABLE_METRIC_HISTOGRAM, attributesHistogramTable);</span>
+<span class="nc" id="L274">        attributesTypeMaps.put(METRICS_TABLE_METRIC_METER, attributesMeterTable);</span>
+<span class="nc" id="L275">        attributesTypeMaps.put(METRICS_TABLE_METRIC_TIMER, attributesTimerTable);</span>
+<span class="nc" id="L276">        return attributesTypeMaps;</span>
+    }
+    
+    public Map&lt;String, String&gt; loadManagerConfigTableTuples(QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L280">        String intType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_INTEGER);</span>
+<span class="nc" id="L281">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L282">        Map&lt;String, String&gt; managerAttributeSelection = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L283">        managerAttributeSelection.put(Constants.MANAGER_HOST_PORT, stringType);</span>
+<span class="nc" id="L284">        managerAttributeSelection.put(Constants.NODE_HOST_NAME, stringType);</span>
+<span class="nc" id="L285">        managerAttributeSelection.put(Constants.NODE_PORT_VALUE, intType);</span>
+<span class="nc" id="L286">        return managerAttributeSelection;</span>
+    }
+    
+    /**
+     * Utility method which can be used to check if a given string instance is null or empty.
+     *
+     * @param field the string instance to be checked.
+     * @return true if the field is null or empty.
+     */
+    public boolean isEmpty(String field) {
+<span class="nc bnc" id="L296" title="All 4 branches missed.">        return (field == null || field.trim().length() == 0);</span>
+    }
+    
+    /**
+     * Util method which is used to populate a {@link PreparedStatement} instance with a single element.
+     *
+     * @param stmt    the statement to which the element should be set.
+     * @param ordinal the ordinal of the element in the statement (its place in a potential list of places).
+     * @param type    the type of the element to be set, adheres to
+     *                {@link org.wso2.siddhi.query.api.definition.Attribute.Type}.
+     * @param value   the value of the element.
+     * @throws SQLException if there are issues when the element is being set.
+     */
+    private PreparedStatement populateStatementWithSingleElement(
+            PreparedStatement stmt, int ordinal, String type, Object value, QueryManager statusDashboardQueryManager)
+            throws SQLException {
+<span class="nc" id="L312">        String doubleType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_DOUBLE);</span>
+<span class="nc" id="L313">        String longType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_LONG);</span>
+<span class="nc" id="L314">        String stringType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L315">        String integerType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_INTEGER);</span>
+<span class="nc" id="L316">        String floatType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_FLOAT);</span>
+<span class="nc" id="L317">        String booleanType = statusDashboardQueryManager.getQuery(Constants.DATA_TYPE_BOOL);</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        if (doubleType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L319">            stmt.setDouble(ordinal, (Double) value);</span>
+<span class="nc bnc" id="L320" title="All 2 branches missed.">        } else if (stringType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L321">            stmt.setString(ordinal, (String) value);</span>
+<span class="nc bnc" id="L322" title="All 2 branches missed.">        } else if (longType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L323">            stmt.setLong(ordinal, (Long) value);</span>
+<span class="nc bnc" id="L324" title="All 2 branches missed.">        } else if (integerType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L325">            stmt.setInt(ordinal, (Integer) value);</span>
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        } else if (floatType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L327">            stmt.setFloat(ordinal, (Float) value);</span>
+<span class="nc bnc" id="L328" title="All 2 branches missed.">        } else if (booleanType.equalsIgnoreCase(type)) {</span>
+<span class="nc" id="L329">            stmt.setBoolean(ordinal, (Boolean) value);</span>
+        } else {
+<span class="nc" id="L331">            logger.error(&quot;Invalid Type of Object &quot;);</span>
+        }
+<span class="nc" id="L333">        return stmt;</span>
+    }
+    
+    /**
+     * Method for replacing the placeholder for conditions with the SQL Where clause and the actual condition.
+     *
+     * @param query     the SQL query in string format, with the &quot;{{CONDITION}}&quot; placeholder present.
+     * @param condition the actual condition (originating from the ConditionVisitor).
+     * @return the formatted string.
+     */
+    public String formatQueryWithCondition(String query, String condition) {
+<span class="nc" id="L344">        return query.replace(PLACEHOLDER_CONDITION, SQL_WHERE + WHITESPACE + condition);</span>
+    }
+    
+    /**
+     * Identify the db type from jdbc metadata.
+     *
+     * @param connection jdbc connection.
+     * @return database type name.
+     * @throws RuntimeException
+     */
+    public String getDBType(Connection connection) {
+        try {
+<span class="nc" id="L356">            DatabaseMetaData databaseMetaData = connection.getMetaData();</span>
+<span class="nc" id="L357">            return databaseMetaData.getDatabaseProductName();</span>
+<span class="nc" id="L358">        } catch (SQLException e) {</span>
+<span class="nc" id="L359">            throw new RuntimeException(&quot;Error occurred while getting the rdbms database type from the meta data.&quot;, e);</span>
+        }
+    }
+    
+    /**
+     * Method for populating values to a pre-created SQL prepared statement.
+     *
+     * @param record the record whose values should be populated.
+     * @param stmt   the statement to which the values should be set.
+     */
+    public PreparedStatement populateInsertStatement(Object[] record, PreparedStatement stmt, Map&lt;String, String&gt;
+            attributesTypeMap, QueryManager statusDashboardQueryManager) {
+<span class="nc" id="L371">        Set&lt;Map.Entry&lt;String, String&gt;&gt; attributeEntries = attributesTypeMap.entrySet();</span>
+<span class="nc" id="L372">        PreparedStatement populatedStatement = stmt;</span>
+<span class="nc" id="L373">        int possition = 0;</span>
+<span class="nc bnc" id="L374" title="All 2 branches missed.">        for (Map.Entry&lt;String, String&gt; attributeEntry : attributeEntries) {</span>
+<span class="nc" id="L375">            Object value = record[possition];</span>
+            try {
+<span class="nc" id="L377">                populatedStatement = instance.populateStatementWithSingleElement(stmt, possition + 1,</span>
+<span class="nc" id="L378">                        attributeEntry.getValue(), value, statusDashboardQueryManager);</span>
+<span class="nc" id="L379">            } catch (SQLException e) {</span>
+<span class="nc" id="L380">                throw new RDBMSTableException(&quot;Dropping event since value for Attribute name &quot; +</span>
+<span class="nc" id="L381">                        attributeEntry.getKey() + &quot;cannot be set: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L382">            }</span>
+<span class="nc" id="L383">            possition++;</span>
+<span class="nc" id="L384">        }</span>
+<span class="nc" id="L385">        return populatedStatement;</span>
+    }
+    
+    /**
+     * Fletch data from the result set.
+     *
+     * @param rs            result set.
+     * @param attributeType Attribute that need to extract.
+     * @return result
+     * @throws SQLException
+     */
+    public Object fetchData(ResultSet rs, String attributeName, String attributeType, QueryManager metricsQueryManager)
+            throws SQLException {
+<span class="nc" id="L398">        String doubleType = metricsQueryManager.getQuery(Constants.DATA_TYPE_DOUBLE);</span>
+<span class="nc" id="L399">        String longType = metricsQueryManager.getQuery(Constants.DATA_TYPE_LONG);</span>
+<span class="nc" id="L400">        String stringType = metricsQueryManager.getQuery(Constants.DATA_TYPE_STRING);</span>
+<span class="nc" id="L401">        String integerType = metricsQueryManager.getQuery(Constants.DATA_TYPE_INTEGER);</span>
+<span class="nc" id="L402">        String floatType = metricsQueryManager.getQuery(Constants.DATA_TYPE_FLOAT);</span>
+<span class="nc" id="L403">        String booleanType = metricsQueryManager.getQuery(Constants.DATA_TYPE_BOOL);</span>
+<span class="nc bnc" id="L404" title="All 2 branches missed.">        if (doubleType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L405">            return rs.getDouble(attributeName);</span>
+<span class="nc bnc" id="L406" title="All 2 branches missed.">        } else if (stringType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L407">            return rs.getString(attributeName);</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">        } else if (longType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L409">            return rs.getLong(attributeName);</span>
+<span class="nc bnc" id="L410" title="All 2 branches missed.">        } else if (integerType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L411">            return rs.getInt(attributeName);</span>
+<span class="nc bnc" id="L412" title="All 2 branches missed.">        } else if (floatType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L413">            return rs.getFloat(attributeName);</span>
+<span class="nc bnc" id="L414" title="All 2 branches missed.">        } else if (booleanType.equalsIgnoreCase(attributeType)) {</span>
+<span class="nc" id="L415">            return rs.getBoolean(attributeName);</span>
+        } else {
+<span class="nc" id="L417">            logger.error(&quot;Invalid Type of Object &quot; + attributeName + &quot;:&quot; + attributeType);</span>
+        }
+<span class="nc" id="L419">        return null;</span>
+    }
+    
+    /**
+     * Method for composing the SQL query for INSERT operations with proper placeholders.
+     *
+     * @return the composed SQL query in string form.
+     */
+    public String composeInsertQuery(String insertQuery, int attributesSize) {
+<span class="nc" id="L428">        StringBuilder params = new StringBuilder();</span>
+<span class="nc" id="L429">        int fieldsLeft = attributesSize;</span>
+<span class="nc bnc" id="L430" title="All 2 branches missed.">        while (fieldsLeft &gt; 0) {</span>
+<span class="nc" id="L431">            params.append(QUESTION_MARK);</span>
+<span class="nc bnc" id="L432" title="All 2 branches missed.">            if (fieldsLeft &gt; 1) {</span>
+<span class="nc" id="L433">                params.append(SEPARATOR + WHITESPACE);</span>
+            }
+<span class="nc" id="L435">            fieldsLeft = fieldsLeft - 1;</span>
+        }
+<span class="nc" id="L437">        return insertQuery.replace(PLACEHOLDER_Q, params.toString());</span>
+    }
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

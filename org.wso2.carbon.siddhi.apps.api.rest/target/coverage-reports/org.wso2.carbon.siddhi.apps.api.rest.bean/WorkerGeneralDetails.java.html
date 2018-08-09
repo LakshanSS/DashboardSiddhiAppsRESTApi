@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WorkerGeneralDetails.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.bean</a> &gt; <span class="el_source">WorkerGeneralDetails.java</span></div><h1>WorkerGeneralDetails.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.bean;
+
+import org.wso2.carbon.siddhi.apps.api.rest.exception.StatusDashboardValidationException;
+
+import java.util.List;
+
+/**
+ * Bean class for worker general details.
+ */
+public class WorkerGeneralDetails {
+    private String carbonId;
+    private String workerId;
+    private String javaRuntimeName;
+    private String javaVMVersion;
+    private String javaVMVendor;
+    private String javaHome;
+    private String javaVersion;
+    private String osName;
+    private String osVersion;
+    private String userHome;
+    private String userTimezone;
+    private String userName;
+    private String userCountry;
+    private String repoLocation;
+    private String serverStartTime;
+    
+<span class="nc" id="L46">    public WorkerGeneralDetails() {</span>
+<span class="nc" id="L47">    }</span>
+    
+    public String getJavaRuntimeName() {
+<span class="nc" id="L50">        return javaRuntimeName;</span>
+    }
+    
+    public void setJavaRuntimeName(String javaRuntimeName) {
+<span class="nc" id="L54">        this.javaRuntimeName = javaRuntimeName;</span>
+<span class="nc" id="L55">    }</span>
+    
+    public String getJavaVMVersion() {
+<span class="nc" id="L58">        return javaVMVersion;</span>
+    }
+    
+    public void setJavaVMVersion(String javaVMVersion) {
+<span class="nc" id="L62">        this.javaVMVersion = javaVMVersion;</span>
+<span class="nc" id="L63">    }</span>
+    
+    public String getJavaVMVendor() {
+<span class="nc" id="L66">        return javaVMVendor;</span>
+    }
+    
+    public void setJavaVMVendor(String javaVMVendor) {
+<span class="nc" id="L70">        this.javaVMVendor = javaVMVendor;</span>
+<span class="nc" id="L71">    }</span>
+    
+    public String getJavaHome() {
+<span class="nc" id="L74">        return javaHome;</span>
+    }
+    
+    public void setJavaHome(String javaHome) {
+<span class="nc" id="L78">        this.javaHome = javaHome;</span>
+<span class="nc" id="L79">    }</span>
+    
+    public String getJavaVersion() {
+<span class="nc" id="L82">        return javaVersion;</span>
+    }
+    
+    public void setJavaVersion(String javaVersion) {
+<span class="nc" id="L86">        this.javaVersion = javaVersion;</span>
+<span class="nc" id="L87">    }</span>
+    
+    public String getOsName() {
+<span class="nc" id="L90">        return osName;</span>
+    }
+    
+    public void setOsName(String osName) {
+<span class="nc" id="L94">        this.osName = osName;</span>
+<span class="nc" id="L95">    }</span>
+    
+    public String getOsVersion() {
+<span class="nc" id="L98">        return osVersion;</span>
+    }
+    
+    public void setOsVersion(String osVersion) {
+<span class="nc" id="L102">        this.osVersion = osVersion;</span>
+<span class="nc" id="L103">    }</span>
+    
+    public String getUserHome() {
+<span class="nc" id="L106">        return userHome;</span>
+    }
+    
+    public void setUserHome(String userHome) {
+<span class="nc" id="L110">        this.userHome = userHome;</span>
+<span class="nc" id="L111">    }</span>
+    
+    public String getUserTimezone() {
+<span class="nc" id="L114">        return userTimezone;</span>
+    }
+    
+    public void setUserTimezone(String userTimezone) {
+<span class="nc" id="L118">        this.userTimezone = userTimezone;</span>
+<span class="nc" id="L119">    }</span>
+    
+    public String getUserName() {
+<span class="nc" id="L122">        return userName;</span>
+    }
+    
+    public void setUserName(String userName) {
+<span class="nc" id="L126">        this.userName = userName;</span>
+<span class="nc" id="L127">    }</span>
+    
+    public String getUserCountry() {
+<span class="nc" id="L130">        return userCountry;</span>
+    }
+    
+    public void setUserCountry(String userCountry) {
+<span class="nc" id="L134">        this.userCountry = userCountry;</span>
+<span class="nc" id="L135">    }</span>
+    
+    public String getRepoLocation() {
+<span class="nc" id="L138">        return repoLocation;</span>
+    }
+    
+    public void setRepoLocation(String repoLocation) {
+<span class="nc" id="L142">        this.repoLocation = repoLocation;</span>
+<span class="nc" id="L143">    }</span>
+    
+    public String getServerStartTime() {
+<span class="nc" id="L146">        return serverStartTime;</span>
+    }
+    
+    public void setServerStartTime(String serverStartTime) {
+<span class="nc" id="L150">        this.serverStartTime = serverStartTime;</span>
+<span class="nc" id="L151">    }</span>
+    
+    public String getCarbonId() {
+<span class="nc" id="L154">        return carbonId;</span>
+    }
+    
+    public void setCarbonId(String carbonId) {
+<span class="nc" id="L158">        this.carbonId = carbonId;</span>
+<span class="nc" id="L159">    }</span>
+    
+    public String getWorkerId() {
+<span class="nc" id="L162">        return workerId;</span>
+    }
+    
+    public void setWorkerId(String workerId) {
+<span class="nc" id="L166">        this.workerId = workerId;</span>
+<span class="nc" id="L167">    }</span>
+    
+    public Object[] toArray() {
+<span class="nc" id="L170">        return new Object[] {carbonId, workerId, javaRuntimeName, javaVMVersion, javaVMVendor, javaHome, javaVersion,</span>
+                osName,
+                osVersion, userHome, userTimezone, userName, userCountry, repoLocation, serverStartTime};
+    }
+    
+    public void setArrayList(List values) throws StatusDashboardValidationException {
+        
+<span class="nc" id="L177">        Object[] objects = new Object[] {carbonId, workerId, javaRuntimeName, javaVMVersion, javaVMVendor,</span>
+                javaHome, javaVersion, osName, osVersion, userHome, userTimezone, userName, userCountry,
+                repoLocation, serverStartTime};
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        if (values.size() != objects.length) {</span>
+<span class="nc" id="L181">            throw new StatusDashboardValidationException(&quot;Invalid length of object&quot;);</span>
+        }
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        for (int i = 0; i &lt; objects.length; i++) {</span>
+<span class="nc bnc" id="L184" title="All 16 branches missed.">            switch (i) {</span>
+                case 0:
+<span class="nc" id="L186">                    carbonId = (String) values.get(i);</span>
+<span class="nc" id="L187">                    break;</span>
+                case 1:
+<span class="nc" id="L189">                    workerId = (String) values.get(i);</span>
+<span class="nc" id="L190">                    break;</span>
+                case 2:
+<span class="nc" id="L192">                    javaRuntimeName = (String) values.get(i);</span>
+<span class="nc" id="L193">                    break;  //optional</span>
+                case 3:
+<span class="nc" id="L195">                    javaVMVersion = (String) values.get(i);</span>
+<span class="nc" id="L196">                    break;  //optional</span>
+                case 4:
+<span class="nc" id="L198">                    javaVMVendor = (String) values.get(i);</span>
+<span class="nc" id="L199">                    break;</span>
+                case 5:
+<span class="nc" id="L201">                    javaHome = (String) values.get(i);</span>
+<span class="nc" id="L202">                    break;  //optional</span>
+                case 6:
+<span class="nc" id="L204">                    javaVersion = (String) values.get(i);</span>
+<span class="nc" id="L205">                    break;</span>
+                case 7:
+<span class="nc" id="L207">                    osName = (String) values.get(i);</span>
+<span class="nc" id="L208">                    break;  //optional</span>
+                case 8:
+<span class="nc" id="L210">                    osVersion = (String) values.get(i);</span>
+<span class="nc" id="L211">                    break;</span>
+                case 9:
+<span class="nc" id="L213">                    userHome = (String) values.get(i);</span>
+<span class="nc" id="L214">                    break;  //optional</span>
+                case 10:
+<span class="nc" id="L216">                    userTimezone = (String) values.get(i);</span>
+<span class="nc" id="L217">                    break;  //optional</span>
+                case 11:
+<span class="nc" id="L219">                    userName = (String) values.get(i);</span>
+<span class="nc" id="L220">                    break;  //optional</span>
+                case 12:
+<span class="nc" id="L222">                    userCountry = (String) values.get(i);</span>
+<span class="nc" id="L223">                    break;</span>
+                case 13:
+<span class="nc" id="L225">                    repoLocation = (String) values.get(i);</span>
+<span class="nc" id="L226">                    break;  //optional</span>
+                case 14:
+<span class="nc" id="L228">                    serverStartTime = (String) values.get(i);</span>
+<span class="nc" id="L229">                    break;</span>
+                default:
+<span class="nc" id="L231">                    throw new StatusDashboardValidationException(&quot;Invalid length of object&quot;);</span>
+            }
+        }
+<span class="nc" id="L234">    }</span>
+    
+    public static String getColumnLabeles() {
+<span class="nc" id="L237">        return &quot;CARBONID,WORKERID,JAVARUNTIMENAME,JAVAVMVERSION,JAVAVMVENDOR,JAVAHOME,JAVAVERSION,OSNAME,&quot; +</span>
+                &quot;OSVERSION,USERHOME,USERTIMEZONE,USERNAME,USERCOUNTRY,REPOLOCATION,SERVERSTARTTIME&quot;;
+    }
+    
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

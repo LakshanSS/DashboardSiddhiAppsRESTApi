@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultConfigurationBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">WSO2 Stream Processor - Siddhi Apps REST API</a> &gt; <a href="index.source.html" class="el_package">org.wso2.carbon.siddhi.apps.api.rest.configuration</a> &gt; <span class="el_source">DefaultConfigurationBuilder.java</span></div><h1>DefaultConfigurationBuilder.java</h1><pre class="source lang-java linenums">/*
+ *  Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ *
+ *  WSO2 Inc. licenses this file to you under the Apache License,
+ *  Version 2.0 (the &quot;License&quot;); you may not use this file except
+ *  in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing,
+ *  software distributed under the License is distributed on an
+ *  &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ *  KIND, either express or implied.  See the License for the
+ *  specific language governing permissions and limitations
+ *  under the License.
+ *
+ */
+
+package org.wso2.carbon.siddhi.apps.api.rest.configuration;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.DeploymentConfigs;
+import org.wso2.carbon.siddhi.apps.api.rest.dbhandler.utils.SQLConstants;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.CustomClassLoaderConstructor;
+import org.yaml.snakeyaml.introspector.BeanAccess;
+
+import java.io.InputStream;
+
+/**
+ * Class use for loading the deafault values from YML file.
+ */
+public class DefaultConfigurationBuilder {
+    
+<span class="nc" id="L37">    private static final Logger log = LoggerFactory.getLogger(DefaultConfigurationBuilder.class);</span>
+    
+<span class="nc" id="L39">    private static DefaultConfigurationBuilder instance = new DefaultConfigurationBuilder();</span>
+    
+    public static DefaultConfigurationBuilder getInstance() {
+<span class="nc" id="L42">        return instance;</span>
+    }
+    
+<span class="nc" id="L45">    private DefaultConfigurationBuilder() {</span>
+<span class="nc" id="L46">    }</span>
+    
+    /**
+     * Get the Environment {@code DashboardsConfiguration}
+     * &lt;p&gt;
+     * Location of the configuration file should be defined in the environment variable 'dashboard.status.conf'.
+     * If environment variable is not specified, return the default configuration
+     *
+     * @return DashboardsConfiguration defined in the environment
+     */
+    public DeploymentConfigs getConfiguration() {
+<span class="nc" id="L57">        ClassLoader classLoader = getClass().getClassLoader();</span>
+<span class="nc" id="L58">        InputStream inputStream = classLoader.getResourceAsStream(SQLConstants.DASHBOARD_CONFIG_FILE);</span>
+        DeploymentConfigs dashboardConfiguration;
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (inputStream != null) {</span>
+<span class="nc" id="L61">            Yaml yaml = new Yaml(new CustomClassLoaderConstructor</span>
+<span class="nc" id="L62">                    (DeploymentConfigs.class, DeploymentConfigs.class.getClassLoader()));</span>
+<span class="nc" id="L63">            yaml.setBeanAccess(BeanAccess.FIELD);</span>
+<span class="nc" id="L64">            dashboardConfiguration = yaml.loadAs(inputStream, DeploymentConfigs.class);</span>
+<span class="nc" id="L65">        } else {</span>
+<span class="nc" id="L66">            throw new RuntimeException(&quot;Dashboard configuration file not found in: &quot; +</span>
+                    &quot; ,hence using default configuration&quot;);
+        }
+<span class="nc" id="L69">        return dashboardConfiguration;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.7.9.201702052155</span></div></body></html>

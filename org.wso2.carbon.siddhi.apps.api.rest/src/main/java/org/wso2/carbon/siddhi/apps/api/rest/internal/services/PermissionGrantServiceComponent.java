@@ -43,7 +43,7 @@ import java.util.List;
  * This is OSGi-components to register config provider class.
  */
 @Component(
-        name = "org.wso2.carbon.status.dashboard.core.internal.services.PermissionGrantServiceComponent",
+        name = "org.wso2.carbon.siddhi.apps.api.rest.internal.services.PermissionGrantServiceComponent",
         service = PermissionGrantServiceComponent.class,
         immediate = true
 )

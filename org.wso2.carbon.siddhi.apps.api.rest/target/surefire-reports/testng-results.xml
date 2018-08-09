@@ -2,10 +2,10 @@
 <testng-results skipped="0" failed="0" total="0" passed="0">
   <reporter-output>
   </reporter-output>
-  <suite name="siddhi-store-query-rest-api-test-suite" duration-ms="5" started-at="2018-08-09T06:55:30Z" finished-at="2018-08-09T06:55:30Z">
+  <suite name="siddhi-store-query-rest-api-test-suite" duration-ms="5" started-at="2018-08-09T09:35:39Z" finished-at="2018-08-09T09:35:39Z">
     <groups>
     </groups>
-    <test name="store-api-test" duration-ms="5" started-at="2018-08-09T06:55:30Z" finished-at="2018-08-09T06:55:30Z">
+    <test name="store-api-test" duration-ms="5" started-at="2018-08-09T09:35:39Z" finished-at="2018-08-09T09:35:39Z">
     </test> <!-- store-api-test -->
   </suite> <!-- siddhi-store-query-rest-api-test-suite -->
 </testng-results>

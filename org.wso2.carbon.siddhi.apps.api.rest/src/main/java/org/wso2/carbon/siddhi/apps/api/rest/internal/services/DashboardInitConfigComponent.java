@@ -34,7 +34,7 @@ import java.util.List;
  * This component handle the all the initialization tasks.
  */
 @Component(
-        name = "org.wso2.carbon.status.dashboard.core.internal.services.DashboardInitConfigComponent",
+        name = "org.wso2.carbon.siddhi.apps.api.rest.internal.services.DashboardInitConfigComponent",
         service = DashboardInitConfigComponent.class,
         immediate = true
 )

@@ -34,7 +34,7 @@ import org.wso2.carbon.siddhi.apps.api.rest.internal.MonitoringDataHolder;
  * This is OSGi-components to register datasource provider class.
  */
 @Component(
-        name = "org.wso2.carbon.status.dashboard.core.internal.services.DatasourceServiceComponent",
+        name = "org.wso2.carbon.siddhi.apps.api.rest.internal.services.DatasourceServiceComponent",
         service = DatasourceServiceComponent.class,
         immediate = true
 )

@@ -1,5 +1,5 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1533797752392
+Bnd-LastModified: 1533807361329
 Build-Jdk: 1.8.0_181
 Built-By: root
 Bundle-Contributors: WSO2 Inc
@@ -125,11 +125,11 @@ Require-Capability: osgi.service;effective:=active;cardinality:=multiple
  r)",osgi.service;effective:=active;filter:="(objectClass=org.wso2.carbo
  n.analytics.idp.client.core.api.IdPClient)",osgi.ee;filter:="(&(osgi.ee
  =JavaSE)(version=1.8))"
-SCM-Revision: 2018-08-09T06:55:17Z
+SCM-Revision: 585e4faa11749497575c0d13fa75bebce5471228
 Service-Component: OSGI-INF/siddhi-apps-service.xml,OSGI-INF/org.wso2.ca
  rbon.siddhi.apps.api.rest.internal.SiddhiAppsApiProvider.xml,OSGI-INF/o
- rg.wso2.carbon.status.dashboard.core.internal.services.DashboardInitCon
- figComponent.xml,OSGI-INF/org.wso2.carbon.status.dashboard.core.interna
- l.services.DatasourceServiceComponent.xml,OSGI-INF/org.wso2.carbon.stat
- us.dashboard.core.internal.services.PermissionGrantServiceComponent.xml
+ rg.wso2.carbon.siddhi.apps.api.rest.internal.services.DashboardInitConf
+ igComponent.xml,OSGI-INF/org.wso2.carbon.siddhi.apps.api.rest.internal.
+ services.DatasourceServiceComponent.xml,OSGI-INF/org.wso2.carbon.siddhi
+ .apps.api.rest.internal.services.PermissionGrantServiceComponent.xml
 Tool: Bnd-2.4.1.201501161923
